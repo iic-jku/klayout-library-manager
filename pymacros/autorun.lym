@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<klayout-macro>
+ <description/>
+ <version/>
+ <category>pymacros</category>
+ <prolog/>
+ <epilog/>
+ <doc/>
+ <autorun>true</autorun>
+ <autorun-early>false</autorun-early>
+ <priority>0</priority>
+ <shortcut/>
+ <show-in-menu>false</show-in-menu>
+ <group-name/>
+ <menu-path/>
+ <interpreter>python</interpreter>
+ <dsl-interpreter-name/>
+ <text># --------------------------------------------------------------------------------
+# SPDX-FileCopyrightText: 2025 Martin Jan Köhler
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see &lt;http://www.gnu.org/licenses/&gt;.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#--------------------------------------------------------------------------------
+
+import os 
+import sys
+
+directory_containing_this_script = os.path.realpath(os.path.dirname(__file__))
+for name in (
+    'KLayoutPluginUtils',   # deployed via Salt
+    'klayout-plugin-utils'  # source code
+):
+    path = os.path.realpath(os.path.join(directory_containing_this_script,
+                                         '..', '..', name, 'python'))
+    if os.path.exists(path):
+        sys.path.append(path)
+sys.path.append(directory_containing_this_script)
+
+from importlib import reload
+import klayout_plugin_utils.dataclass_dict_helpers
+import klayout_plugin_utils.debugging
+import klayout_plugin_utils.event_loop
+import klayout_plugin_utils.file_selector_widget
+import klayout_plugin_utils.layer_list_string
+import klayout_plugin_utils.str_enum_compat
+import constants
+import library_manager_dialog
+import library_map_config
+import library_manager_plugin
+import new_hierarchical_layout_dialog
+
+reload(klayout_plugin_utils.dataclass_dict_helpers)
+reload(klayout_plugin_utils.debugging)
+reload(klayout_plugin_utils.event_loop)
+reload(klayout_plugin_utils.file_selector_widget)
+reload(klayout_plugin_utils.layer_list_string)
+reload(klayout_plugin_utils.str_enum_compat)
+reload(constants)
+reload(library_manager_dialog)
+reload(library_map_config)
+reload(library_manager_plugin)
+reload(new_hierarchical_layout_dialog)
+
+import klayout_plugin_utils.debugging
+klayout_plugin_utils.debugging.Debugging.init_debugging()
+
+from library_manager_plugin import LibraryManagerPluginFactory
+LibraryManagerPluginFactory.instance = LibraryManagerPluginFactory()
+</text>
+</klayout-macro>
