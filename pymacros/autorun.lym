@@ -36,6 +36,11 @@
 import os 
 import sys
 
+import pya
+
+if pya.MainWindow.instance() is None:  # non-GUI mode
+    return
+
 directory_containing_this_script = os.path.realpath(os.path.dirname(__file__))
 for name in (
     'KLayoutPluginUtils',   # deployed via Salt
