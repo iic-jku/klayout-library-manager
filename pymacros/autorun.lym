@@ -39,7 +39,7 @@ import sys
 import pya
 
 if pya.MainWindow.instance() is None:  # non-GUI mode
-    return
+    sys.exit(0)
 
 directory_containing_this_script = os.path.realpath(os.path.dirname(__file__))
 for name in (
