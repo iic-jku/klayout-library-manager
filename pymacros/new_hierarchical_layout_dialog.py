@@ -333,7 +333,7 @@ class NewHierarchicalLayoutDialog(pya.QDialog):
                     file_path += FILE_SUFFIX_HIERARCHICAL_LAYOUT
                 self.page.save_path_le.setText(file_path)
                 
-                FileSystemHelpers.set_least_recent_directory(os.path.dir(file_path))
+                FileSystemHelpers.set_least_recent_directory(os.path.dirname(file_path))
         except Exception as e:
             print("NewHierarchicalLayoutDialog.on_browse_save_path caught an exception", e)
             traceback.print_exc()
