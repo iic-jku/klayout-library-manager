@@ -17,5 +17,5 @@
 #--------------------------------------------------------------------------------
 
 
-FILE_SUFFIX_HIERARCHICAL_LAYOUT = '.klay'
+FILE_SUFFIX_HIERARCHICAL_LAYOUT = '.klay.gds'
 FILE_SUFFIX_LIBRARY_MAP = '.klib'
