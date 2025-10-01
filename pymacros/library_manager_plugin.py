@@ -135,6 +135,12 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             'reload_cell_libraries': action_reload_cell_libraries,
         }
         
+        # Remove existing commands
+        for name, action in self.actions_by_name.items():
+            path = f"file_menu.{name}"
+            menu.delete_item(path)
+        menu.delete_item('file_menu.hierarchical_layout_separator')
+        
         # Locate the separator after the 'New …' commands
         file_menu_items = menu.items('file_menu')
         idx = file_menu_items.index('file_menu.open')
