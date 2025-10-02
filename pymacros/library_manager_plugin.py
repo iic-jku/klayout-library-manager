@@ -292,7 +292,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 mw,
                 "Select Hierarchical Layout File",
                 lru_path,
-                f"{HIERARCHICAL_LAYOUT_FILE_SUFFIXES};;All Files (*)"
+                f"{HIERARCHICAL_LAYOUT_FILE_FILTER};;All Files (*)"
             )
         
             if layout_path_str:
