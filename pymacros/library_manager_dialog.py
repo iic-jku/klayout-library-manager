@@ -26,9 +26,11 @@ import pya
 from klayout_plugin_utils.debugging import debug, Debugging
 from klayout_plugin_utils.event_loop import EventLoop
 from klayout_plugin_utils.file_selector_widget import FileSelectorWidget
+from klayout_plugin_utils.path_helpers import strip_all_suffixes
 
 from constants import (
     LIBRARY_MAP_FILE_FILTER,
+    HIERARCHICAL_LAYOUT_FILE_SUFFIXES,
 )    
 
 from library_map_config import (
@@ -182,7 +184,7 @@ class LibraryManagerDialog(pya.QDialog):
         
         def on_path_changed(file_selector_widget):
             if item.text(0) == '':
-                stem = Path(file_selector_widget.path).stem
+                stem = strip_all_suffixes(Path(file_selector_widget.path), HIERARCHICAL_LAYOUT_FILE_SUFFIXES)
                 item.setText(0, stem)
         
         file_widget.on_path_changed += [on_path_changed]
