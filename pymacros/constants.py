@@ -16,13 +16,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #--------------------------------------------------------------------------------
 
-
 GENERIC_LAYOUT_FILE_SUFFIXES = ('.gds', '.gds.gz', 'gds2', 'gds2.gz', '.txt', '.oas')
 HIERARCHICAL_LAYOUT_FILE_SUFFIXES = ('.klay.gds', '.klay.gds.gz', '.klay.txt', '.klay.oas')
 HIERARCHICAL_LAYOUT_FILE_FILTER = ';;'.join([
-    'Hierarchical Layout – GDS2 Files (*.klay.gds *.klay.gds.gz)',
-    'Hierarchical Layout – GDS2 Text Files (*.klay.txt)',
-    'Hierarchical Layout – OASIS Files (*.klay.oas)'
+    'Hierarchical GDS2 Files (*.klay.gds *.klay.gds.gz)',
+    'Hierarchical GDS2 Text Files (*.klay.txt)',
+    'Hierarchical OASIS Files (*.klay.oas)'
 ])
 LIBRARY_MAP_FILE_SUFFIX = '.klib'
 LIBRARY_MAP_FILE_FILTER = 'Library Map (*.klib)'
