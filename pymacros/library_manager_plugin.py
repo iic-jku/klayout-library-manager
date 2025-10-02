@@ -369,6 +369,8 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 self.report_no_active_cell_view('No view open to save')
                 return
                 
+            cv = pya.CellView.active()
+            layout = cv.layout()
             if not self.validate_layout_is_hierarchical(layout, 'Save Hierarchical Layout failed'):
                 return
             
