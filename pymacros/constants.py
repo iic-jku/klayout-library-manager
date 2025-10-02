@@ -17,6 +17,7 @@
 #--------------------------------------------------------------------------------
 
 
+GENERIC_LAYOUT_FILE_SUFFIXES = ('.gds', '.gds.gz', 'gds2', 'gds2.gz', '.txt', '.oas')
 HIERARCHICAL_LAYOUT_FILE_SUFFIXES = ('.klay.gds', '.klay.gds.gz', '.klay.txt', '.klay.oas')
 HIERARCHICAL_LAYOUT_FILE_FILTER = ';;'.join([
     'Hierarchical Layout – GDS2 Files (*.klay.gds *.klay.gds.gz)',
