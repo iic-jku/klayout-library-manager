@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>700</width>
-    <height>611</height>
+    <width>695</width>
+    <height>628</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -285,10 +285,10 @@
     </widget>
    </item>
    <item>
-    <widget class="QLabel" name="label_10">
+    <widget class="QLabel" name="command_hints_lbl">
      <property name="minimumSize">
       <size>
-       <width>657</width>
+       <width>671</width>
        <height>0</height>
       </size>
      </property>
@@ -304,8 +304,11 @@
 &lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;File → Save Hierarchical Layout As…&lt;/span&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;&lt;code&gt;&lt;/code&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;Save current hierarchical layout under a different name&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;
 
 &lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;File → Manage Cell Library Map…&lt;/span&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;&lt;code&gt;Ctrl+Shift+M&lt;/code&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;Manage cell library map&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;
-
-
+&lt;tr&gt;
+    &lt;td&gt;&lt;p&gt;&lt;span style=&quot;font-style:italic;&quot;&gt;File → Reload Cell Libraries…&lt;/span&gt;&lt;/p&gt;&lt;/td&gt;
+    &lt;td&gt;&lt;p&gt;&lt;code&gt;Ctrl+Shift+R&lt;/code&gt;&lt;/p&gt;&lt;/td&gt;
+    &lt;td&gt;&lt;p&gt;Reload cell libraries&lt;/p&gt;&lt;/td&gt;
+&lt;/tr&gt;
 
 &lt;/table&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>

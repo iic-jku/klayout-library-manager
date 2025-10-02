@@ -301,6 +301,58 @@ class NewHierarchicalLayoutDialog(pya.QDialog):
         
         self.on_radio_buttons_changed()
         
+        mw = pya.MainWindow.instance()
+        menu = mw.menu()
+        action_new_hierarchical_layout = menu.action('file_menu.new_hierarchical_layout')
+        action_open_hierarchical_layout = menu.action('file_menu.open_hierarchical_layout')
+        action_save_hierarchical_layout = menu.action('file_menu.save_hierarchical_layout')
+        action_save_as_hierarchical_layout = menu.action('file_menu.save_as_hierarchical_layout')
+        action_manage_cell_library_map = menu.action('file_menu.manage_cell_library_map')
+        action_reload_cell_libraries = menu.action('file_menu.reload_cell_libraries')
+        
+        self.page.command_hints_lbl.setText(f"""
+<html><head/><body>
+<p>
+    <span style=" font-weight:600; text-decoration: underline;">NOTE:</span> 
+    For hierarchical layouts to work, the following commands must be used: 
+</p>
+<table border="1" style="margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px;" cellspacing="0" cellpadding="3">
+<tr>
+    <td><p align="center"><span style=" font-weight:600;">Menu Command</span></p></td>
+    <td><p align="center"><span style=" font-weight:600;">Shortcut</span></p></td>
+    <td><p align="center"><span style=" font-weight:600;">Description</span></p></td>
+</tr>
+<tr>
+    <td><p><span style="font-style:italic;">File → New Hierarchical Layout…</span></p></td>
+    <td><p><code>{action_new_hierarchical_layout.effective_shortcut()}</code></p></td>
+    <td><p>Create a new layout panel along with the library map</p></td>
+</tr>
+<tr>
+    <td><p><span style="font-style:italic;">File → Open Hierarchical Layout…</span></p></td>
+    <td><p><code>{action_open_hierarchical_layout.effective_shortcut()}</code></p></td>
+    <td><p>Open an existing hierarchical layout in a new panel</p></td></tr>
+<tr>
+    <td><p><span style="font-style:italic;">File → Save Hierarchical Layout</span></p></td>
+    <td><p><code>{action_save_hierarchical_layout.effective_shortcut()}</code></p></td>
+    <td><p>Save current hierarchical layout</p></td></tr>
+<tr>
+    <td><p><span style="font-style:italic;">File → Save Hierarchical Layout As…</span></p></td>
+    <td><p><code>{action_save_as_hierarchical_layout.effective_shortcut()}</code></p></td>
+    <td><p>Save current hierarchical layout under a different name</p></td>
+</tr>
+<tr>
+    <td><p><span style="font-style:italic;">File → Manage Cell Library Map…</span></p></td>
+    <td><p><code>{action_manage_cell_library_map.effective_shortcut()}</code></p></td>
+    <td><p>Manage cell library map</p></td>
+</tr>
+<tr>
+    <td><p><span style="font-style:italic;">File → Reload Cell Libraries…</span></p></td>
+    <td><p><code>{action_reload_cell_libraries.effective_shortcut()}</code></p></td>
+    <td><p>Reload cell libraries</p></td>
+</tr>
+</table></body></html>        
+""")
+        
     def on_ok(self):
         if Debugging.DEBUG:
             debug("NewHierarchicalLayoutDialog.on_ok")
