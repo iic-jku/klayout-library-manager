@@ -119,8 +119,24 @@ class NewHierarchicalLayoutDialog(pya.QDialog):
             self.page.dbu_le.placeholderText = preconfigured_tech.dbu
         
         config = NewHierarchicalLayoutConfig()
-        config.save_path = Path(FileSystemHelpers.least_recent_directory() or os.getcwd()) / \
-                           f"{config.top_cell.lower() or 'top'}{HIERARCHICAL_LAYOUT_FILE_SUFFIXES[0]}"
+
+        def build_save_path(i: int) -> Path:
+            dir_str = FileSystemHelpers.least_recent_directory() or os.getcwd()
+            file_str = f"{config.top_cell.lower() or 'top'}{'' if i==0 else i+1}{HIERARCHICAL_LAYOUT_FILE_SUFFIXES[0]}"
+            return Path(dir_str) / file_str
+        
+        save_path_candidate: Path
+        i=0
+        while True:
+            save_path_candidate = build_save_path(i)
+            lib_path = save_path_candidate.with_suffix(LIBRARY_MAP_FILE_SUFFIX)
+            if save_path_candidate.exists() or lib_path.exists():
+                i += 1
+                continue
+            else:
+                break
+        config.save_path = save_path_candidate
+        
         self.update_ui_from_config(config)
         
         self._config = None
