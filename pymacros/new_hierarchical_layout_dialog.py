@@ -30,7 +30,12 @@ from klayout_plugin_utils.file_system_helpers import FileSystemHelpers
 from klayout_plugin_utils.layer_list_string import LayerList
 from klayout_plugin_utils.str_enum_compat import StrEnum
 
-from constants import FILE_SUFFIX_HIERARCHICAL_LAYOUT, FILE_SUFFIX_LIBRARY_MAP
+from constants import (
+    HIERARCHICAL_LAYOUT_FILE_SUFFIXES,
+    HIERARCHICAL_LAYOUT_FILE_FILTER,
+    LIBRARY_MAP_FILE_SUFFIX,
+    LIBRARY_MAP_FILE_FILTER,
+)
 
 
 #--------------------------------------------------------------------------------
@@ -115,7 +120,7 @@ class NewHierarchicalLayoutDialog(pya.QDialog):
         
         config = NewHierarchicalLayoutConfig()
         config.save_path = Path(FileSystemHelpers.least_recent_directory() or os.getcwd()) / \
-                           f"{config.top_cell.lower() or 'top'}{FILE_SUFFIX_HIERARCHICAL_LAYOUT}"
+                           f"{config.top_cell.lower() or 'top'}{HIERARCHICAL_LAYOUT_FILE_SUFFIXES[0]}"
         self.update_ui_from_config(config)
         
         self._config = None
@@ -146,7 +151,7 @@ class NewHierarchicalLayoutDialog(pya.QDialog):
             if not parent_dir.exists() or not parent_dir.is_dir():
                 self.set_field_valid(self.page.save_path_le, False)
                 valid = False
-            elif save_path.suffix.lower() != FILE_SUFFIX_HIERARCHICAL_LAYOUT:
+            elif '.'.join(save_path.suffixes).lower() in HIERARCHICAL_LAYOUT_FILE_SUFFIXES:
                 self.set_field_valid(self.page.save_path_le, False)
                 valid = False
             else:
@@ -325,12 +330,12 @@ class NewHierarchicalLayoutDialog(pya.QDialog):
                 self,               
                 "Select Layout File Path",
                 lru_path,                 # starting dir ("" = default to last used / home)
-                f"Hierarchical Layout (*{FILE_SUFFIX_HIERARCHICAL_LAYOUT});;All Files (*)"
+                f"{HIERARCHICAL_LAYOUT_FILE_FILTER};;All Files (*)"
             )
         
             if file_path:
-                if not file_path.lower().endswith(FILE_SUFFIX_HIERARCHICAL_LAYOUT):
-                    file_path += FILE_SUFFIX_HIERARCHICAL_LAYOUT
+                if '.'.join(file_path.suffixes).lower() not in HIERARCHICAL_LAYOUT_FILE_SUFFIXES:
+                    file_path += HIERARCHICAL_LAYOUT_FILE_SUFFIXES[0]   # TODO: determine suffix from user-chosen filter
                 self.page.save_path_le.setText(file_path)
                 
                 FileSystemHelpers.set_least_recent_directory(os.path.dirname(file_path))
@@ -349,7 +354,7 @@ class NewHierarchicalLayoutDialog(pya.QDialog):
                 self,
                 "Select Library Map Template",
                 lru_path,
-                f"Library Map (*{FILE_SUFFIX_LIBRARY_MAP});;All Files (*)"
+                f"{LIBRARY_MAP_FILE_FILTER};;All Files (*)"
             )
         
             if file_path:

@@ -17,5 +17,11 @@
 #--------------------------------------------------------------------------------
 
 
-FILE_SUFFIX_HIERARCHICAL_LAYOUT = '.klay.gds'
-FILE_SUFFIX_LIBRARY_MAP = '.klib'
+HIERARCHICAL_LAYOUT_FILE_SUFFIXES = ('.klay.gds', '.klay.gds.gz', '.klay.txt', '.klay.oas')
+HIERARCHICAL_LAYOUT_FILE_FILTER = ';;'.join([
+    'Hierarchical Layout – GDS2 Files (*.klay.gds *.klay.gds.gz)',
+    'Hierarchical Layout – GDS2 Text Files (*.klay.txt)',
+    'Hierarchical Layout – OASIS Files (*.klay.oas)'
+])
+LIBRARY_MAP_FILE_SUFFIX = '.klib'
+LIBRARY_MAP_FILE_FILTER = 'Library Map (*.klib)'

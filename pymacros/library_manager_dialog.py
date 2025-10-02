@@ -27,7 +27,9 @@ from klayout_plugin_utils.debugging import debug, Debugging
 from klayout_plugin_utils.event_loop import EventLoop
 from klayout_plugin_utils.file_selector_widget import FileSelectorWidget
 
-from constants import FILE_SUFFIX_LIBRARY_MAP
+from constants import (
+    LIBRARY_MAP_FILE_FILTER,
+)    
 
 from library_map_config import (
     LibraryMapConfig, 
@@ -144,7 +146,7 @@ class LibraryManagerDialog(pya.QDialog):
             tree,
             file_dialog_title='Select Library Map File',
             file_types=[
-                f"Library Map (*{FILE_SUFFIX_LIBRARY_MAP})"
+                LIBRARY_MAP_FILE_FILTER
             ]
         )
         if include_path:
@@ -169,6 +171,7 @@ class LibraryManagerDialog(pya.QDialog):
                'GDS II Binary file (*.gds.gz)',
                'GDS II Text file (*.txt)',
                'OASIS file (*.oas)',
+               'All Files (*)',
             ]
         )
         if lib_path:

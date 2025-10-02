@@ -30,7 +30,12 @@ from klayout_plugin_utils.debugging import debug, Debugging
 from klayout_plugin_utils.event_loop import EventLoop
 from klayout_plugin_utils.file_system_helpers import FileSystemHelpers
 
-from constants import FILE_SUFFIX_HIERARCHICAL_LAYOUT, FILE_SUFFIX_LIBRARY_MAP
+from constants import (
+    HIERARCHICAL_LAYOUT_FILE_SUFFIXES,
+    HIERARCHICAL_LAYOUT_FILE_FILTER,
+    LIBRARY_MAP_FILE_SUFFIX,
+    LIBRARY_MAP_FILE_FILTER,
+)    
 from library_map_config import LibraryMapConfig, LibraryMapStatement, LibraryMapComment, LibraryDefinition, LibraryMapInclude
 from library_manager_dialog import LibraryManagerDialog
 from new_hierarchical_layout_dialog import NewHierarchicalLayoutDialog, LibraryMapCreationMode
@@ -38,7 +43,6 @@ from new_hierarchical_layout_dialog import NewHierarchicalLayoutDialog, LibraryM
 #--------------------------------------------------------------------------------
 
 path_containing_this_script = os.path.realpath(os.path.dirname(__file__))
-
 
 #--------------------------------------------------------------------------------
 
@@ -55,7 +59,7 @@ class LayoutFileSet:
     
     @property
     def lib_path(self) -> Path:
-        path = self.layout_path.with_suffix(FILE_SUFFIX_LIBRARY_MAP)
+        path = self.layout_path.with_suffix(LIBRARY_MAP_FILE_SUFFIX)
         return path
 
     def load_config(self, msg: str) -> Optional[LibraryMapConfig]:
@@ -179,7 +183,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         # prepare library config map sidecar file
         #
         
-        map_path = config.save_path.with_suffix(FILE_SUFFIX_LIBRARY_MAP)
+        map_path = config.save_path.with_suffix(LIBRARY_MAP_FILE_SUFFIX)
         
         map_cfg = LibraryMapConfig(
             technology=config.technology.name,
@@ -288,12 +292,12 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 mw,
                 "Select Hierarchical Layout File",
                 lru_path,
-                f"Hierarchical Layout (*{FILE_SUFFIX_HIERARCHICAL_LAYOUT});;All Files (*)"
+                f"{HIERARCHICAL_LAYOUT_FILE_SUFFIXES};;All Files (*)"
             )
         
             if layout_path_str:
                 layout_path = Path(layout_path_str)
-                lib_path = layout_path.with_suffix(FILE_SUFFIX_LIBRARY_MAP)
+                lib_path = layout_path.with_suffix(LIBRARY_MAP_FILE_SUFFIX)
                 if not lib_path.exists():
                     mbx = pya.QMessageBox(mw)
                     mbx.icon = pya.QMessageBox_Icon.Critical
@@ -380,16 +384,16 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 mw,               
                 "Select Layout File Path",
                 lru_path,                 # starting dir ("" = default to last used / home)
-                f"Hierarchical Layout (*{FILE_SUFFIX_HIERARCHICAL_LAYOUT});;All Files (*)"
+                f"{HIERARCHICAL_LAYOUT_FILE_FILTER};;All Files (*)"
             )
         
             if layout_path:
-                if not layout_path.lower().endswith(FILE_SUFFIX_HIERARCHICAL_LAYOUT):
-                    layout_path += FILE_SUFFIX_HIERARCHICAL_LAYOUT
+                if '.'.join(layout_path.suffixes).lower() not in HIERARCHICAL_LAYOUT_FILE_SUFFIXES:
+                    layout_path += HIERARCHICAL_LAYOUT_FILE_SUFFIXES[0]
                 
                 FileSystemHelpers.set_least_recent_directory(os.path.dir(layout_path))
 
-                lib_path = layout_path.with_suffix(FILE_SUFFIX_LIBRARY_MAP)
+                lib_path = layout_path.with_suffix(LIBRARY_MAP_FILE_SUFFIX)
 
                 self.save_layout_and_library(layout_path, lib_path, self.config)
         except Exception as e:
