@@ -167,8 +167,7 @@ class LibraryManagerDialog(pya.QDialog):
             tree,
             file_dialog_title='Select Cell Library File',
             file_types=[
-               'GDS II Binary file (*.gds)',
-               'GDS II Binary file (*.gds.gz)',
+               'GDS II Binary file (*.gds *.gds.gz)',
                'GDS II Text file (*.txt)',
                'OASIS file (*.oas)',
                'All Files (*)',
