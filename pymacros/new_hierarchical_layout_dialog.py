@@ -325,7 +325,7 @@ class NewHierarchicalLayoutDialog(pya.QDialog):
                 self,               
                 "Select Layout File Path",
                 lru_path,                 # starting dir ("" = default to last used / home)
-                f"Hierarchical Layout (*{FILE_SUFFIX_HIERARCHICAL_LAYOUT})"
+                f"Hierarchical Layout (*{FILE_SUFFIX_HIERARCHICAL_LAYOUT});;All Files (*)"
             )
         
             if file_path:
@@ -349,7 +349,7 @@ class NewHierarchicalLayoutDialog(pya.QDialog):
                 self,
                 "Select Library Map Template",
                 lru_path,
-                f"Library Map (*{FILE_SUFFIX_LIBRARY_MAP})"
+                f"Library Map (*{FILE_SUFFIX_LIBRARY_MAP});;All Files (*)"
             )
         
             if file_path:

@@ -288,7 +288,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 mw,
                 "Select Hierarchical Layout File",
                 lru_path,
-                f"Hierarchical Layout (*{FILE_SUFFIX_HIERARCHICAL_LAYOUT})"
+                f"Hierarchical Layout (*{FILE_SUFFIX_HIERARCHICAL_LAYOUT});;All Files (*)"
             )
         
             if layout_path_str:
@@ -380,7 +380,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 mw,               
                 "Select Layout File Path",
                 lru_path,                 # starting dir ("" = default to last used / home)
-                f"Hierarchical Layout (*{FILE_SUFFIX_HIERARCHICAL_LAYOUT})"
+                f"Hierarchical Layout (*{FILE_SUFFIX_HIERARCHICAL_LAYOUT});;All Files (*)"
             )
         
             if layout_path:
