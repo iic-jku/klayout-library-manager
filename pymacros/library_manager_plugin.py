@@ -446,6 +446,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 lib.layout().read(lib_def.lib_path)
                 lib.register(lib_def.lib_name)
             else:              
+                lib.layout().read(lib_def.lib_path)
                 lib.refresh()
     
     def on_reload_cell_libraries(self):
