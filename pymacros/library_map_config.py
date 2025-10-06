@@ -17,7 +17,7 @@
 #--------------------------------------------------------------------------------
 
 from __future__ import annotations
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from functools import cached_property
 import json
 from pathlib import Path
@@ -38,7 +38,7 @@ class LibraryMapComment:
     comment: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class LibraryDefinition:
     lib_name: str
     lib_path: Path
@@ -58,8 +58,8 @@ LibraryMapStatement = Union[
 
 @dataclass
 class LibraryMapConfig:
-    technology: str
-    statements: List[LibraryMapStatement]
+    technology: str = ''
+    statements: List[LibraryMapStatement] = field(default_factory=list)
 
     @classmethod
     def read_json(cls, path: Path) -> LibraryMapConfig:
