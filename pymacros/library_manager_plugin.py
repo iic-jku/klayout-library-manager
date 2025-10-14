@@ -35,7 +35,8 @@ from constants import (
     HIERARCHICAL_LAYOUT_FILE_FILTER,
     LIBRARY_MAP_FILE_SUFFIX,
     LIBRARY_MAP_FILE_FILTER,
-)    
+)
+from library_map_changes import LibraryMapChanges
 from library_map_config import LibraryMapConfig, LibraryMapStatement, LibraryMapComment, LibraryDefinition, LibraryMapInclude
 from library_manager_dialog import LibraryManagerDialog
 from new_hierarchical_layout_dialog import NewHierarchicalLayoutDialog, LibraryMapCreationMode
@@ -432,79 +433,47 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                     return
                 
                 base_folder = layout_file_set.layout_path.parent
-                self.apply_library_map_changes(base_folder, old_map_cfg, new_map_cfg)
+                        
+                changes = LibraryMapChanges.compare(base_folder, old_map_cfg, new_map_cfg)
+                
+                if Debugging.DEBUG:
+                    debug(f"LibraryManagerPluginFactory.on_manage_cell_library_map\n"
+                          f"\tadded: {changes.added_libs}\n"
+                          f"\tremoved: {changes.removed_libs}\n"
+                          f"\trenamed: {changes.renamed_libs}\n"
+                          f"\trepathed: {changes.repathed_libs}\n")
+                
+                self.apply_library_map_changes(changes)
         except Exception as e:
             print("LibraryManagerPluginFactory.on_manage_cell_library_map caught an exception", e)
             traceback.print_exc()
     
-    def apply_library_map_changes(self, 
-                                  base_folder: Path, 
-                                  old_config: LibraryMapConfig,
-                                  new_config: LibraryMapConfig):
+    def apply_library_map_changes(self, changes: LibraryMapChanges):
         if Debugging.DEBUG:
             debug("LibraryManagerPluginFactory.on_reload_cell_libraries")
-            
-        # if we have a layout containing cells, referencing to a renamed library
-        # we want to change the references to the new name
 
-        new_lib_defs = new_config.effective_library_definitions(base_folder)
-        old_lib_defs = old_config.effective_library_definitions(base_folder)
+        mw = pya.MainWindow.instance()
         
-        old_lib_defs_by_path = {ld.lib_path: ld for ld in old_lib_defs}
-        new_lib_defs_by_path = {ld.lib_path: ld for ld in new_lib_defs}
-        new_lib_defs_by_name = {ld.lib_name: ld for ld in new_lib_defs}
-        
-        added_libs: List[LibraryDefinition] = []
-        removed_libs: List[LibraryDefinition] = []
-        renamed_libs: List[Tuple[LibraryDefinition, LibraryDefinition]] = []
-        repathed_libs: List[Tuple[LibraryDefinition, LibraryDefinition]] = []
-        
-        handled_new_lib_defs: Set[LibraryDefinition] = set()
-        
-        for path, old_def in old_lib_defs_by_path.items():
-            new_def = new_lib_defs_by_path.get(path, None)
-            if new_def is None:  # lib was removed (or got other path?)
-                new_def_for_name = new_lib_defs_by_name.get(old_def.lib_name, None)
-                if new_def_for_name is not None:
-                    repathed_libs.append((old_def, new_def_for_name))
-                    handled_new_lib_defs.add(new_def_for_name)
-                else:
-                    removed_libs.append(lib_def)
-            else:
-                if old_def != new_def:
-                    renamed_libs.append((old_def, new_def))
-                handled_new_lib_defs.add(new_def)
-        
-        for new_def in new_lib_defs:
-            if new_def not in handled_new_lib_defs:
-                handled_new_lib_defs.add(new_def)
-                added_libs.append(new_def)
-        
-        if Debugging.DEBUG:
-            debug(f"LibraryManagerPluginFactory.reload_cell_libraries\n"
-                  f"\tremoved: {removed_libs}\n"
-                  f"\trenamed: {renamed_libs}\n"
-                  f"\trepathed: {repathed_libs}\n")
-        
-        for new_lib_def in added_libs:
+        for new_lib_def in changes.added_libs:
             lib = pya.Library()
             lib.layout().read(new_lib_def.lib_path)
             lib.register(new_lib_def.lib_name)
         
-        for old_lib_def, new_lib_def in renamed_libs:
+        for old_lib_def, new_lib_def in changes.renamed_libs:
             lib = pya.Library.library_by_name(old_lib_def.lib_name)
-            # lib.name = new_lib_def.lib_name
-            lib.refresh()
-
-        for old_lib_def, new_lib_def in repathed_libs:
+            if 'rename' in dir(lib):  # added in KLayout 0.30.5 API
+                lib.rename(new_lib_def.lib_name)
+            
+        for old_lib_def, new_lib_def in changes.repathed_libs:
             lib = pya.Library.library_by_name(new_lib_def.lib_name)
             lib.layout().read(new_lib_def.lib_path)
             lib.refresh()
-
-        for old_lib_def in removed_libs:
+        
+        for old_lib_def in changes.removed_libs:
             lib = pya.Library.library_by_name(old_lib_def.lib_name)
-            lib = pya.Library.unregister()
-                
+            if 'unregister' in dir(pya.Library):  # added in KLayout 0.30.5 API
+                pya.Library.unregister(lib)
+    
     def on_reload_cell_libraries(self):
         if Debugging.DEBUG:
             debug("LibraryManagerPluginFactory.on_reload_cell_libraries")
