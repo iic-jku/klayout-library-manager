@@ -425,14 +425,14 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             mw = pya.MainWindow.instance()
             self.library_manager_dialog = LibraryManagerDialog(mw)
             self.library_manager_dialog.update_ui_from_config(layout_file_set.layout_path, layout_file_set.lib_path, old_map_cfg)
-            self.library_manager_dialog.exec_()
-            
-            new_map_cfg = layout_file_set.load_config('Manage cell library map failed')
-            if new_map_cfg is None:
-                return
-            
-            base_folder = layout_file_set.layout_path.parent
-            self.apply_library_map_changes(base_folder, old_map_cfg, new_map_cfg)
+            result = self.library_manager_dialog.exec_()
+            if result != 0:
+                new_map_cfg = layout_file_set.load_config('Manage cell library map failed')
+                if new_map_cfg is None:
+                    return
+                
+                base_folder = layout_file_set.layout_path.parent
+                self.apply_library_map_changes(base_folder, old_map_cfg, new_map_cfg)
         except Exception as e:
             print("LibraryManagerPluginFactory.on_manage_cell_library_map caught an exception", e)
             traceback.print_exc()
