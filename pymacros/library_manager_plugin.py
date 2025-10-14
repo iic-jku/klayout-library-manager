@@ -471,9 +471,10 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 else:
                     removed_libs.append(lib_def)
             else:
-                renamed_libs.append((old_def, new_def))
+                if old_def != new_def:
+                    renamed_libs.append((old_def, new_def))
                 handled_new_lib_defs.add(new_def)
-                
+        
         for new_def in new_lib_defs:
             if new_def not in handled_new_lib_defs:
                 handled_new_lib_defs.add(new_def)
@@ -503,12 +504,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         for old_lib_def in removed_libs:
             lib = pya.Library.library_by_name(old_lib_def.lib_name)
             lib = pya.Library.unregister()
-            
-        for lib_def in new_lib_defs:
-            lib = pya.Library()
-            lib.layout().read(lib_def.lib_path)
-            lib.register(lib_def.lib_name)
-    
+                
     def on_reload_cell_libraries(self):
         if Debugging.DEBUG:
             debug("LibraryManagerPluginFactory.on_reload_cell_libraries")
