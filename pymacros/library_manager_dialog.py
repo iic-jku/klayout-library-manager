@@ -242,6 +242,9 @@ class LibraryManagerDialog(pya.QDialog):
             if not path.exists():
                 item_is_valid = False
                 item.setText(status_idx, 'Not found!')  # update status
+            elif self.layout_path == path:
+                item_is_valid = False
+                item.setText(status_idx, 'Recursion!')  # update status
             elif path in already_seen_paths:
                 item_is_valid = False
                 item.setText(status_idx, 'Duplicate!')  # update status
