@@ -222,9 +222,10 @@ class LibraryManagerDialog(pya.QDialog):
         for inc in config.library_map_includes:
             self.add_includes_tree_row(include_path=str(inc.include_path))
 
-        # Nothing is selected yet, disable remove
-        self.page.library_remove_pb.setEnabled(False)
-        self.page.include_remove_pb.setEnabled(False)
+        selected = self.page.library_mappings_tw.selectedItems()
+        self.page.library_remove_pb.setEnabled(bool(selected))
+        selected = self.page.includes_tw.selectedItems()
+        self.page.include_remove_pb.setEnabled(bool(selected))
         
     def set_cell_valid(self, item: pya.QTreeWidgetItem, column: int, valid: bool):
         color = pya.QColor(255, 255, 255) if valid \
