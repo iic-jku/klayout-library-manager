@@ -146,6 +146,7 @@ class LibraryManagerDialog(pya.QDialog):
         tree.addTopLevelItem(item)
         file_widget = FileSelectorWidget(
             tree,
+            editable=True,
             file_dialog_title='Select Library Map File',
             file_types=[
                 LIBRARY_MAP_FILE_FILTER
@@ -167,6 +168,7 @@ class LibraryManagerDialog(pya.QDialog):
         tree.addTopLevelItem(item)
         file_widget = FileSelectorWidget(
             tree,
+            editable=True,
             file_dialog_title='Select Cell Library File',
             file_types=[
                'GDS II Binary file (*.gds *.gds.gz)',
