@@ -31,7 +31,9 @@ from klayout_plugin_utils.dataclass_dict_helpers import dataclass_from_dict
 from klayout_plugin_utils.debugging import debug, Debugging
 from klayout_plugin_utils.event_loop import EventLoop
 from klayout_plugin_utils.json_helpers import JSONEncoderSupportingPaths
+from klayout_plugin_utils.path_helpers import expand_path
 
+#--------------------------------------------------------------------------------
 
 @dataclass
 class LibraryMapComment:
@@ -55,6 +57,7 @@ LibraryMapStatement = Union[
     LibraryMapInclude,
 ]
 
+#--------------------------------------------------------------------------------
 
 @dataclass
 class LibraryMapConfig:
@@ -89,6 +92,7 @@ class LibraryMapConfig:
 
     @staticmethod
     def resolve_path(path: Path, base_folder: Path) -> Path:
+        path = expand_path(path)
         if not path.is_absolute():
             path = Path(base_folder) / path
         path = path.resolve()

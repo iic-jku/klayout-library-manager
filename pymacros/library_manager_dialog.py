@@ -26,7 +26,11 @@ import pya
 from klayout_plugin_utils.debugging import debug, Debugging
 from klayout_plugin_utils.event_loop import EventLoop
 from klayout_plugin_utils.file_selector_widget import FileSelectorWidget
-from klayout_plugin_utils.path_helpers import strip_all_suffixes
+from klayout_plugin_utils.path_helpers import (
+    strip_all_suffixes,
+    abbreviate_path,
+    expand_path,
+)
 
 from constants import (
     LIBRARY_MAP_FILE_FILTER,
@@ -137,6 +141,13 @@ class LibraryManagerDialog(pya.QDialog):
                           self.page.includes_tw, self.on_remove_include)
         ]
     
+    def transform_path(self, path: Path) -> Path:
+        ep = expand_path(path)
+        ap = abbreviate_path(path=ep,
+                             env_vars=['PDK_ROOT', 'HOME'],  # 'PDK'
+                             base_folder=self.lib_path.parent)
+        return ap
+    
     def add_includes_tree_row(self, include_path: str):
         tree: pya.QTreeWidget = self.page.includes_tw
         
@@ -144,13 +155,15 @@ class LibraryManagerDialog(pya.QDialog):
         item = pya.QTreeWidgetItem()
         item.setFlags(item.flags | pya.Qt.ItemIsEditable)
         tree.addTopLevelItem(item)
+                
         file_widget = FileSelectorWidget(
             tree,
             editable=True,
             file_dialog_title='Select Library Map File',
             file_types=[
                 LIBRARY_MAP_FILE_FILTER
-            ]
+            ],
+            path_transformer=self.transform_path
         )
         if include_path:
             file_widget.path = include_path
@@ -175,7 +188,8 @@ class LibraryManagerDialog(pya.QDialog):
                'GDS II Text file (*.txt)',
                'OASIS file (*.oas)',
                'All Files (*)',
-            ]
+            ],
+            path_transformer=self.transform_path
         )
         if lib_path:
             file_widget.path = lib_path
@@ -220,7 +234,23 @@ class LibraryManagerDialog(pya.QDialog):
     def validate_ui_inputs(self) -> bool:
         valid = True
         
-        problem_items: Tuple[pya.QTreeWidget, pya.QTreeWidgetItem, int] = []
+        already_seen_paths: Set[Path] = set()
+        
+        def update_path_status(item: pya.QTreeWidgetItem, path_idx: int, status_idx: int, path: Path) -> bool:
+            path = expand_path(path)
+            item_is_valid = False
+            if not path.exists():
+                item_is_valid = False
+                item.setText(status_idx, 'Not found!')  # update status
+            elif path in already_seen_paths:
+                item_is_valid = False
+                item.setText(status_idx, 'Duplicate!')  # update status
+            else:
+                item_is_valid = True
+                item.setText(status_idx, 'OK')
+            already_seen_paths.add(path)
+            self.set_cell_valid(item, path_idx, item_is_valid)
+            return item_is_valid
         
         for i in range(0, self.page.library_mappings_tw.topLevelItemCount):
             item = self.page.library_mappings_tw.topLevelItem(i)
@@ -228,25 +258,15 @@ class LibraryManagerDialog(pya.QDialog):
             lib_path = self.page.library_mappings_tw.itemWidget(item, 1).path  # FileSelectorWidget
             self.set_cell_valid(item, 0, bool(lib_name.strip() != ''))
             path = Path(lib_path)
-            if path.exists():
-                item.setText(2, 'OK')
-            else:
-                valid = False
-                item.setText(2, 'Not found!')  # update status
-            self.set_cell_valid(item, 1, path.exists())
-            problem_items.append((self.page.library_mappings_tw, item, 1))
+            if not update_path_status(item=item, path_idx=1, status_idx=2, path=path):
+                valid=False
             
         for i in range(0, self.page.includes_tw.topLevelItemCount):
             item = self.page.includes_tw.topLevelItem(i)
             include_path = self.page.includes_tw.itemWidget(item, 0).path  # FileSelectorWidget
             path = Path(include_path)
-            if path.exists():
-                item.setText(1, 'OK')
-            else:
-                valid = False
-                item.setText(1, 'Not found!')  # update status
-            self.set_cell_valid(item, 0, path.exists())
-            problem_items.append((self.page.includes_tw,item, 0))
+            if not update_path_status(item=item, path_idx=0, status_idx=1, path=path):
+                valid=False
         
         # clear selection, otherwise the red indication could be hidden
         self.page.library_mappings_tw.clearSelection()
