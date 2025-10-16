@@ -43,6 +43,7 @@ from library_map_config import (
     LibraryMapComment, 
     LibraryDefinition, 
     LibraryMapInclude,
+    LibraryMapIssues,
 )
 
 #--------------------------------------------------------------------------------
@@ -168,9 +169,20 @@ class LibraryManagerDialog(pya.QDialog):
         if include_path:
             file_widget.path = include_path
         
-        tree.setItemWidget(item, 0, file_widget)
-        item.setText(1, status)
+        path_idx = 0
+        status_idx = 1
+        
+        tree.setItemWidget(item, path_idx, file_widget)
+        item.setText(status_idx, status)
         tree.setCurrentItem(item)
+        
+        def on_path_changed(file_selector_widget):
+            self.set_cell_valid(item, path_idx, True)
+            item.setText(status_idx, '')
+            if file_selector_widget.path != '':
+                self.validate_ui_inputs()
+        
+        file_widget.on_path_changed += [on_path_changed]
 
     def add_library_tree_row(self, lib_name: str, lib_path: str):
         tree: pya.QTreeWidget = self.page.library_mappings_tw
@@ -193,15 +205,22 @@ class LibraryManagerDialog(pya.QDialog):
         )
         if lib_path:
             file_widget.path = lib_path
+            
+        path_idx = 1
+        status_idx = 2
+        
         item.setText(0, lib_name)
-        tree.setItemWidget(item, 1, file_widget)
-        item.setText(2, status)
+        tree.setItemWidget(item, path_idx, file_widget)
+        item.setText(status_idx, status)
         tree.setCurrentItem(item)
         
         def on_path_changed(file_selector_widget):
             if item.text(0) == '':
                 stem = strip_all_suffixes(Path(file_selector_widget.path), GENERIC_LAYOUT_FILE_SUFFIXES)
                 item.setText(0, stem)
+            self.set_cell_valid(item, path_idx, True)
+            item.setText(status_idx, '')
+            self.validate_ui_inputs()
         
         file_widget.on_path_changed += [on_path_changed]
 
@@ -227,12 +246,17 @@ class LibraryManagerDialog(pya.QDialog):
         selected = self.page.includes_tw.selectedItems()
         self.page.include_remove_pb.setEnabled(bool(selected))
         
+        self.validate_ui_inputs()
+        
     def set_cell_valid(self, item: pya.QTreeWidgetItem, column: int, valid: bool):
         color = pya.QColor(255, 255, 255) if valid \
                 else pya.QColor(255, 0, 0, 50)     # light red
         item.setBackgroundColor(column, color)
     
     def validate_ui_inputs(self) -> bool:
+        if Debugging.DEBUG:
+            debug("LibraryManagerDialog.validate_ui_inputs")
+
         valid = True
         
         already_seen_paths: Set[Path] = set()
@@ -243,6 +267,9 @@ class LibraryManagerDialog(pya.QDialog):
             if not path.exists():
                 item_is_valid = False
                 item.setText(status_idx, 'Not found!')  # update status
+            elif not path.is_file():
+                item_is_valid = False
+                item.setText(status_idx, 'Not a file!')  # update status
             elif self.layout_path == path:
                 item_is_valid = False
                 item.setText(status_idx, 'Recursion!')  # update status
@@ -258,19 +285,37 @@ class LibraryManagerDialog(pya.QDialog):
         
         for i in range(0, self.page.library_mappings_tw.topLevelItemCount):
             item = self.page.library_mappings_tw.topLevelItem(i)
+            path_idx = 1
+            status_idx = 2
             lib_name = item.text(0)
-            lib_path = self.page.library_mappings_tw.itemWidget(item, 1).path  # FileSelectorWidget
+            lib_path = self.page.library_mappings_tw.itemWidget(item, path_idx).path  # FileSelectorWidget
             self.set_cell_valid(item, 0, bool(lib_name.strip() != ''))
             path = Path(lib_path)
-            if not update_path_status(item=item, path_idx=1, status_idx=2, path=path):
+            if not update_path_status(item=item, path_idx=1, status_idx=status_idx, path=path):
                 valid=False
             
         for i in range(0, self.page.includes_tw.topLevelItemCount):
             item = self.page.includes_tw.topLevelItem(i)
-            include_path = self.page.includes_tw.itemWidget(item, 0).path  # FileSelectorWidget
+            path_idx = 0
+            status_idx = 1
+            include_path = self.page.includes_tw.itemWidget(item, path_idx).path  # FileSelectorWidget
             path = Path(include_path)
-            if not update_path_status(item=item, path_idx=0, status_idx=1, path=path):
+            if not update_path_status(item=item, path_idx=path_idx, status_idx=status_idx, path=path):
                 valid=False
+            else:
+                try:
+                    cfg = LibraryMapConfig.read_json(path)
+                except Exception as ex:
+                    item.setText(status_idx, f"Unreadable: {ex}")
+                    self.set_cell_valid(item, path_idx, False)
+                    continue
+                issues = LibraryMapIssues()
+                libs = cfg.effective_library_definitions(base_folder=path.parent, issues=issues)
+                if issues.failed_libraries or issues.failed_includes:
+                    item.setText(status_idx, f"Missing files!")
+                    item.setToolTip(status_idx, issues.rich_text())
+                    self.set_cell_valid(item, path_idx, False)
+                    continue
         
         # clear selection, otherwise the red indication could be hidden
         self.page.library_mappings_tw.clearSelection()

@@ -31,7 +31,8 @@ from klayout_plugin_utils.debugging import debug, Debugging
 
 from library_map_config import (
     LibraryMapConfig,
-    LibraryDefinition
+    LibraryDefinition,
+    LibraryMapIssues,
 )
 
 #--------------------------------------------------------------------------------
@@ -42,6 +43,7 @@ class LibraryMapChanges:
     removed_libs: List[LibraryDefinition] = field(default_factory=list)
     renamed_libs: List[Tuple[LibraryDefinition, LibraryDefinition]] = field(default_factory=list)
     repathed_libs: List[Tuple[LibraryDefinition, LibraryDefinition]] = field(default_factory=list)
+    issues: LibraryMapIssues = field(default_factory=LibraryMapIssues)
 
     @classmethod
     def compare(self, 
@@ -51,8 +53,11 @@ class LibraryMapChanges:
         # if we have a layout containing cells, referencing to a renamed library
         # we want to change the references to the new name
 
-        new_lib_defs = new_config.effective_library_definitions(base_folder)
-        old_lib_defs = old_config.effective_library_definitions(base_folder)
+        old_issues = LibraryMapIssues()
+        issues = LibraryMapIssues()
+
+        new_lib_defs = new_config.effective_library_definitions(base_folder, issues)
+        old_lib_defs = old_config.effective_library_definitions(base_folder, old_issues)
         
         old_lib_defs_by_path = {ld.lib_path: ld for ld in old_lib_defs}
         new_lib_defs_by_path = {ld.lib_path: ld for ld in new_lib_defs}
@@ -87,7 +92,8 @@ class LibraryMapChanges:
         return LibraryMapChanges(added_libs=added_libs,
                                  removed_libs=removed_libs,
                                  renamed_libs=renamed_libs,
-                                 repathed_libs=repathed_libs)
+                                 repathed_libs=repathed_libs,
+                                 issues=issues)
         
 #--------------------------------------------------------------------------------
 
