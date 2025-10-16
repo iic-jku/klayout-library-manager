@@ -526,7 +526,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             if lib is None:
                 lib = pya.Library()
                 lib.layout().read(new_lib_def.lib_path)
-                lib.register()
+                lib.register(new_lib_def.lib_name)
             else:
                 lib.layout().read(new_lib_def.lib_path)
                 lib.refresh()
