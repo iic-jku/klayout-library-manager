@@ -29,14 +29,23 @@ import pya
 from klayout_plugin_utils.debugging import debug, Debugging
 from klayout_plugin_utils.event_loop import EventLoop
 from klayout_plugin_utils.file_system_helpers import FileSystemHelpers
+from klayout_plugin_utils.str_enum_compat import StrEnum
 
 from constants import (
     HIERARCHICAL_LAYOUT_FILE_SUFFIXES,
     HIERARCHICAL_LAYOUT_FILE_FILTER,
     LIBRARY_MAP_FILE_SUFFIX,
     LIBRARY_MAP_FILE_FILTER,
-)    
-from library_map_config import LibraryMapConfig, LibraryMapStatement, LibraryMapComment, LibraryDefinition, LibraryMapInclude
+)
+from library_map_changes import LibraryMapChanges
+from library_map_config import (
+    LibraryMapConfig, 
+    LibraryMapStatement, 
+    LibraryMapComment, 
+    LibraryDefinition, 
+    LibraryMapInclude,
+    LibraryMapIssues,
+)
 from library_manager_dialog import LibraryManagerDialog
 from new_hierarchical_layout_dialog import NewHierarchicalLayoutDialog, LibraryMapCreationMode
 
@@ -79,6 +88,16 @@ class LayoutFileSet:
             return
 
 #--------------------------------------------------------------------------------
+
+class LibraryMapIssueConsequence(StrEnum):
+    NONE = 'none'
+    LOAD_NOTHING = "load_nothing"
+    LOAD_LOADABLES = "load_loadables"
+    EDIT_MAP = "edit_map"
+    CLOSE_LAYOUT = "close_layout"
+
+#--------------------------------------------------------------------------------
+
 
 class LibraryManagerPluginFactory(pya.PluginFactory):
     def __init__(self):
@@ -279,6 +298,29 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             return False
         return True
         
+    def report_library_map_issues(self, issues: LibraryMapIssues) -> LibraryMapIssueConsequence:
+        if not issues.failed_libraries and not issues.failed_includes:
+            return LibraryMapIssueConsequence.NONE
+    
+        mbox = pya.QMessageBox()
+        mbox.setIcon(pya.QMessageBox.Critical)
+        mbox.setWindowTitle('Library Map Error')
+        mbox.setTextFormat(pya.Qt.RichText)
+        mbox.setText(issues.rich_text())
+        
+        cancel_button = mbox.addButton("Cancel", pya.QMessageBox.RejectRole)
+        close_button = mbox.addButton("Close Layout", pya.QMessageBox.DestructiveRole)
+        edit_button = mbox.addButton("Edit Map", pya.QMessageBox.ActionRole)
+        ignore_button = mbox.addButton("Ignore", pya.QMessageBox.AcceptRole)
+        
+        result = mbox.exec_()
+        print("result={result}")
+        match result:
+            case 0: return LibraryMapIssueConsequence.LOAD_NOTHING
+            case 1: return LibraryMapIssueConsequence.CLOSE_LAYOUT
+            case 2: return LibraryMapIssueConsequence.EDIT_MAP
+            case 3: return LibraryMapIssueConsequence.LOAD_LOADABLES
+    
     def on_load_hierarchical_layout(self):
         if Debugging.DEBUG:
             debug("LibraryManagerPluginFactory.on_load_hierarchical_layout")
@@ -328,10 +370,10 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 #       therefore we start with an empty view, load the libs there,
                 #       then open the layout
                 mw.create_view()
-                
+
                 self.reload_cell_libraries(lib_path, config)
                 mw.load_layout(str(layout_path), 0)
-                    
+                
         except Exception as e:
             print("NewHierarchicalLayoutDialog.on_browse_save_path caught an exception", e)
             traceback.print_exc()
@@ -418,36 +460,82 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             if not self.validate_layout_is_hierarchical(layout, 'Opening Library Manager failed'):
                 return
             
-            map_cfg = layout_file_set.load_config('Manage cell library map failed')
-            if map_cfg is None:
+            old_map_cfg = layout_file_set.load_config('Manage cell library map failed')
+            if old_map_cfg is None:
                 return
             
             mw = pya.MainWindow.instance()
             self.library_manager_dialog = LibraryManagerDialog(mw)
-            self.library_manager_dialog.update_ui_from_config(layout_file_set.layout_path, layout_file_set.lib_path, map_cfg)
-            self.library_manager_dialog.exec_()
-            
-            map_cfg = layout_file_set.load_config('Manage cell library map failed')
-            if map_cfg is None:
-                return
-            
-            self.reload_cell_libraries(layout_file_set.lib_path, map_cfg)
+            self.library_manager_dialog.update_ui_from_config(layout_file_set.layout_path, layout_file_set.lib_path, old_map_cfg)
+            result = self.library_manager_dialog.exec_()
+            if result != 0:
+                new_map_cfg = layout_file_set.load_config('Manage cell library map failed')
+                if new_map_cfg is None:
+                    return
+                
+                base_folder = layout_file_set.layout_path.parent
+                        
+                changes = LibraryMapChanges.compare(base_folder, old_map_cfg, new_map_cfg)
+                
+                if Debugging.DEBUG:
+                    debug(f"LibraryManagerPluginFactory.on_manage_cell_library_map\n"
+                          f"\tadded: {changes.added_libs}\n"
+                          f"\tremoved: {changes.removed_libs}\n"
+                          f"\trenamed: {changes.renamed_libs}\n"
+                          f"\trepathed: {changes.repathed_libs}\n")
+                
+                self.apply_library_map_changes(changes)
         except Exception as e:
             print("LibraryManagerPluginFactory.on_manage_cell_library_map caught an exception", e)
             traceback.print_exc()
+    
+    def apply_library_map_changes(self, changes: LibraryMapChanges):
+        if Debugging.DEBUG:
+            debug("LibraryManagerPluginFactory.on_reload_cell_libraries")
+
+        mw = pya.MainWindow.instance()
+        
+        consequence = self.report_library_map_issues(changes.issues)
+        match consequence:
+            case LibraryMapIssueConsequence.LOAD_NOTHING:
+                return
+            case LibraryMapIssueConsequence.EDIT_MAP:
+                EventLoop.defer(self.on_manage_cell_library_map)
+                return
+            case LibraryMapIssueConsequence.CLOSE_LAYOUT:
+                mw = pya.MainWindow.instance()
+                EventLoop.defer(mw.close_current_view)
+                return
+            case LibraryMapIssueConsequence.NONE |\
+                 LibraryMapIssueConsequence.LOAD_LOADABLES:
+                pass
+        
+        for new_lib_def in changes.added_libs:
+            lib = pya.Library()
+            lib.layout().read(new_lib_def.lib_path)
+            lib.register(new_lib_def.lib_name)
+        
+        for old_lib_def, new_lib_def in changes.renamed_libs:
+            lib = pya.Library.library_by_name(old_lib_def.lib_name)
+            if 'rename' in dir(lib):  # added in KLayout 0.30.5 API
+                lib.rename(new_lib_def.lib_name)
             
-    def reload_cell_libraries(self, lib_path: Path, config: LibraryMapConfig):
-        for lib_def in config.effective_library_definitions(base_folder=lib_path.parent):
-            if Debugging.DEBUG:
-                debug(f"Reload library {lib_def.lib_name} from path {lib_def.lib_path}")
-            lib = pya.Library.library_by_name(lib_def.lib_name)
+        for old_lib_def, new_lib_def in changes.repathed_libs:
+            lib = pya.Library.library_by_name(new_lib_def.lib_name)
+            # NOTE: due to loading errors, it could be that the library does not yet exist
             if lib is None:
                 lib = pya.Library()
-                lib.layout().read(lib_def.lib_path)
-                lib.register(lib_def.lib_name)
-            else:              
-                lib.layout().read(lib_def.lib_path)
+                lib.layout().read(new_lib_def.lib_path)
+                lib.register()
+            else:
+                lib.layout().read(new_lib_def.lib_path)
                 lib.refresh()
+        
+        for old_lib_def in changes.removed_libs:
+            lib = pya.Library.library_by_name(old_lib_def.lib_name)
+            if lib:  # NOTE: due to loading errors, it could be that the library does not yet exist
+                if 'unregister' in dir(pya.Library):  # added in KLayout 0.30.5 API
+                    pya.Library.unregister(lib)
     
     def on_reload_cell_libraries(self):
         if Debugging.DEBUG:
@@ -465,9 +553,46 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             map_cfg = layout_file_set.load_config('Reload cell libraries failed')
             if map_cfg is None:
                 return
-            
+
             self.reload_cell_libraries(layout_file_set.lib_path, map_cfg)
             
         except Exception as e:
             print("LibraryManagerPluginFactory.on_reload_cell_libraries caught an exception", e)
             traceback.print_exc()
+
+    def reload_cell_libraries(self, lib_path: Path, config: LibraryMapConfig):
+        if Debugging.DEBUG:
+            debug("LibraryManagerPluginFactory.reload_cell_libraries")
+        
+        parent_dir = lib_path.parent
+        issues = LibraryMapIssues()
+        new_lib_defs = config.effective_library_definitions(base_folder=parent_dir, issues=issues)
+        
+        consequence = self.report_library_map_issues(issues)
+        match consequence:
+            case LibraryMapIssueConsequence.LOAD_NOTHING:
+                return
+            case LibraryMapIssueConsequence.EDIT_MAP:
+                EventLoop.defer(self.on_manage_cell_library_map)
+            case LibraryMapIssueConsequence.NONE |\
+                 LibraryMapIssueConsequence.LOAD_LOADABLES:
+                for lib_def in new_lib_defs:
+                    if Debugging.DEBUG:
+                        debug(f"Reload library {lib_def.lib_name} from path {lib_def.lib_path}")
+                    lib = pya.Library.library_by_name(lib_def.lib_name)
+                    if lib is None:
+                        lib = pya.Library()
+                        try:
+                            lib.layout().read(lib_def.lib_path)
+                            lib.register(lib_def.lib_name)
+                        except:
+                            pass
+                    else:              
+                        try:
+                            lib.layout().read(lib_def.lib_path)
+                            lib.refresh()
+                        except:
+                            pass
+            case LibraryMapIssueConsequence.CLOSE_LAYOUT:
+                mw = pya.MainWindow.instance()
+                EventLoop.defer(mw.close_current_view)

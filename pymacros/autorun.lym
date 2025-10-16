@@ -61,6 +61,7 @@ import klayout_plugin_utils.layer_list_string
 import klayout_plugin_utils.str_enum_compat
 import constants
 import library_manager_dialog
+import library_map_changes
 import library_map_config
 import library_manager_plugin
 import new_hierarchical_layout_dialog
@@ -73,6 +74,7 @@ reload(klayout_plugin_utils.layer_list_string)
 reload(klayout_plugin_utils.str_enum_compat)
 reload(constants)
 reload(library_manager_dialog)
+reload(library_map_changes)
 reload(library_map_config)
 reload(library_manager_plugin)
 reload(new_hierarchical_layout_dialog)

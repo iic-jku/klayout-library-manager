@@ -17,7 +17,7 @@
 #--------------------------------------------------------------------------------
 
 from __future__ import annotations
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from functools import cached_property
 import json
 from pathlib import Path
@@ -31,14 +31,16 @@ from klayout_plugin_utils.dataclass_dict_helpers import dataclass_from_dict
 from klayout_plugin_utils.debugging import debug, Debugging
 from klayout_plugin_utils.event_loop import EventLoop
 from klayout_plugin_utils.json_helpers import JSONEncoderSupportingPaths
+from klayout_plugin_utils.path_helpers import expand_path
 
+#--------------------------------------------------------------------------------
 
 @dataclass
 class LibraryMapComment:
     comment: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class LibraryDefinition:
     lib_name: str
     lib_path: Path
@@ -55,11 +57,35 @@ LibraryMapStatement = Union[
     LibraryMapInclude,
 ]
 
+#--------------------------------------------------------------------------------
+
+@dataclass
+class LibraryMapIssues:
+    failed_libraries: List[Tuple[LibraryDefinition, str]] = field(default_factory=list)
+    failed_includes: List[Tuple[LibraryMapInclude, str]] = field(default_factory=list)
+
+    def rich_text(self) -> str:
+        msg = "Detected issues with library map.<br/><br/>"
+        if len(self.failed_libraries) > 0:
+            msg += "Failed libraries:<br/>"
+            for lib, reason in self.failed_libraries:
+                msg += f"&nbsp;&nbsp;&nbsp;&nbsp;• <i>{lib.lib_name}</i> at <code>{lib.lib_path}</code> "
+                msg += f"<font color='red'>({reason})</font>"
+            msg += "<br/>"
+        
+        if len(self.failed_includes) > 0:
+            msg += "Failed includes:<br/>"
+            for include, reason in self.failed_includes:
+                msg += f"&nbsp;&nbsp;&nbsp;&nbsp;• <i>{include.include_path}</i> "
+                msg += f"<font color='red'>({reason})</font>"
+        return msg
+
+#--------------------------------------------------------------------------------
 
 @dataclass
 class LibraryMapConfig:
-    technology: str
-    statements: List[LibraryMapStatement]
+    technology: str = ''
+    statements: List[LibraryMapStatement] = field(default_factory=list)
 
     @classmethod
     def read_json(cls, path: Path) -> LibraryMapConfig:
@@ -89,28 +115,55 @@ class LibraryMapConfig:
 
     @staticmethod
     def resolve_path(path: Path, base_folder: Path) -> Path:
+        path = expand_path(path)
         if not path.is_absolute():
             path = Path(base_folder) / path
         path = path.resolve()
         return path
     
-    def effective_library_definitions(self, base_folder: Path) -> List[LibraryDefinition]:
+    def validate_path(self, 
+                      path: Union[Path, str],
+                      read_bytes: int = 4) -> Optional[str]:
+        path = Path(path)
+        if not path.exists():
+            return 'File does not exist'
+        elif not path.is_file():
+            return 'Not a regular file'
+        else:
+            if read_bytes > 0:
+                try:
+                    with open(path, 'rb') as f:
+                        f.read(read_bytes)
+                except Exception as e:
+                    return f"Unreadable: {e}"
+        return None
+    
+    def effective_library_definitions(self, base_folder: Path, issues: LibraryMapIssues) -> List[LibraryDefinition]:
         """
         Resolve all includes to get the effective list of definitions
         """
         libs = []
+        
         for s in self.statements:
             if isinstance(s, LibraryMapComment):
                 continue
             elif isinstance(s, LibraryDefinition):
-                libs += [LibraryDefinition(s.lib_name, self.resolve_path(s.lib_path, base_folder))]
+                lib_path = self.resolve_path(s.lib_path, base_folder)
+                libs += [LibraryDefinition(s.lib_name, lib_path)]
+                issue = self.validate_path(lib_path)
+                if issue:
+                    issues.failed_libraries.append((s, issue))
             elif isinstance(s, LibraryMapInclude):
                 if not s.include_path.is_file():
                     print(f"ERROR: library map file contains non-file include entry: {s.include_path}, ignoring…")
                     continue
                 path = self.resolve_path(s.include_path, base_folder)
-                config = LibraryMapConfig.read_json(path)
-                libs += config.effective_library_definitions(base_folder=path.parent)
+                issue = self.validate_path(path)
+                if issue:
+                    issues.failed_includes.append((s, issue))
+                else:
+                    config = LibraryMapConfig.read_json(path)
+                    libs += config.effective_library_definitions(base_folder=path.parent, issues=issues)
         return libs
 
 #--------------------------------------------------------------------------------
@@ -148,7 +201,8 @@ class LibraryMapConfigTests(unittest.TestCase):
             LibraryDefinition('my_stdcells', Path('my_stdcells.gds.gz'))
         ])
         
-        obtained_libs = cfg.effective_library_definitions(base_folder='/home/foo')
+        issues = LibraryMapIssues()
+        obtained_libs = cfg.effective_library_definitions(base_folder='/home/foo', issues=issue)
         self.assertEqual(Path('/home/foo/my_stdcells.gds.gz').resolve(), obtained_libs[0].lib_path)
 
         
