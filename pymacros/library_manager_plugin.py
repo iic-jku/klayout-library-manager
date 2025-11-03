@@ -218,7 +218,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             case LibraryMapCreationMode.LINK_TEMPLATE:
                 if not validate_library_map_template():
                     return
-                map_cfg.statements.append(LibraryMapInclude(str(config.library_map_template_path)))
+                map_cfg.statements.append(LibraryMapInclude(config.library_map_template_path))
                 map_cfg.write_json(map_path)
                 
             case LibraryMapCreationMode.COPY_TEMPLATE:
