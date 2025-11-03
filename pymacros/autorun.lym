@@ -58,6 +58,7 @@ import klayout_plugin_utils.debugging
 import klayout_plugin_utils.event_loop
 import klayout_plugin_utils.file_selector_widget
 import klayout_plugin_utils.layer_list_string
+import klayout_plugin_utils.qt_helpers
 import klayout_plugin_utils.str_enum_compat
 import constants
 import library_manager_dialog
@@ -71,6 +72,7 @@ reload(klayout_plugin_utils.debugging)
 reload(klayout_plugin_utils.event_loop)
 reload(klayout_plugin_utils.file_selector_widget)
 reload(klayout_plugin_utils.layer_list_string)
+reload(klayout_plugin_utils.qt_helpers)
 reload(klayout_plugin_utils.str_enum_compat)
 reload(constants)
 reload(library_manager_dialog)

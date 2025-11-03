@@ -27,14 +27,18 @@ from klayout_plugin_utils.debugging import debug, Debugging
 from klayout_plugin_utils.event_loop import EventLoop
 from klayout_plugin_utils.file_selector_widget import FileSelectorWidget
 from klayout_plugin_utils.path_helpers import (
-    strip_all_suffixes,
+    stem_without_suffixes,
     abbreviate_path,
     expand_path,
+)
+from klayout_plugin_utils.qt_helpers import (
+    qshortcut,
 )
 
 from constants import (
     LIBRARY_MAP_FILE_FILTER,
     GENERIC_LAYOUT_FILE_SUFFIXES,
+    HIERARCHICAL_LAYOUT_FILE_SUFFIXES,
 )    
 
 from library_map_config import (
@@ -134,11 +138,13 @@ class LibraryManagerDialog(pya.QDialog):
         
         self.page.library_mappings_tw.itemSelectionChanged.connect(self.on_library_selection_changed)
         self.page.includes_tw.itemSelectionChanged.connect(self.on_include_selection_changed)
-        
+
+        # NOTE: qt5 vs qt6 has different QShortCut ctor arguments,
+        #       thus use our safety wrapper        
         self.shortcuts = [
-            pya.QShortcut(pya.QKeySequence("Delete"), 
-                          self.page.library_mappings_tw, self.on_remove_library),
-            pya.QShortcut(pya.QKeySequence("Backspace"), 
+            qshortcut(pya.QKeySequence("Delete"), 
+                      self.page.library_mappings_tw, self.on_remove_library),
+            qshortcut(pya.QKeySequence("Backspace"), 
                           self.page.includes_tw, self.on_remove_include)
         ]
     
@@ -216,7 +222,10 @@ class LibraryManagerDialog(pya.QDialog):
         
         def on_path_changed(file_selector_widget):
             if item.text(0) == '':
-                stem = strip_all_suffixes(Path(file_selector_widget.path), GENERIC_LAYOUT_FILE_SUFFIXES)
+                path = Path(file_selector_widget.path)
+                stem = stem_without_suffixes(path, HIERARCHICAL_LAYOUT_FILE_SUFFIXES)
+                if stem == path:
+                    stem = stem_without_suffixes(path, GENERIC_LAYOUT_FILE_SUFFIXES)
                 item.setText(0, stem)
             self.set_cell_valid(item, path_idx, True)
             item.setText(status_idx, '')
@@ -329,12 +338,14 @@ class LibraryManagerDialog(pya.QDialog):
         for i in range(0, self.page.library_mappings_tw.topLevelItemCount):
             item = self.page.library_mappings_tw.topLevelItem(i)
             lib_name = item.text(0)
-            lib_path = self.page.library_mappings_tw.itemWidget(item, 1).path  # FileSelectorWidget
+            lib_path_str = self.page.library_mappings_tw.itemWidget(item, 1).path  # FileSelectorWidget
+            lib_path = Path(lib_path_str)
             statements.append(LibraryDefinition(lib_name, lib_path))
         
         for i in range(0, self.page.includes_tw.topLevelItemCount):
             item = self.page.includes_tw.topLevelItem(i)
-            include_path = self.page.includes_tw.itemWidget(item, 0).path  # FileSelectorWidget
+            include_path_str = self.page.includes_tw.itemWidget(item, 0).path  # FileSelectorWidget
+            include_path = Path(include_path_str)
             statements.append(LibraryMapInclude(include_path))
         
         return LibraryMapConfig(technology='',  # TODO
