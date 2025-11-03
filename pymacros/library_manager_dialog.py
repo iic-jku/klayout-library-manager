@@ -338,12 +338,14 @@ class LibraryManagerDialog(pya.QDialog):
         for i in range(0, self.page.library_mappings_tw.topLevelItemCount):
             item = self.page.library_mappings_tw.topLevelItem(i)
             lib_name = item.text(0)
-            lib_path = self.page.library_mappings_tw.itemWidget(item, 1).path  # FileSelectorWidget
+            lib_path_str = self.page.library_mappings_tw.itemWidget(item, 1).path  # FileSelectorWidget
+            lib_path = Path(lib_path_str)
             statements.append(LibraryDefinition(lib_name, lib_path))
         
         for i in range(0, self.page.includes_tw.topLevelItemCount):
             item = self.page.includes_tw.topLevelItem(i)
-            include_path = self.page.includes_tw.itemWidget(item, 0).path  # FileSelectorWidget
+            include_path_str = self.page.includes_tw.itemWidget(item, 0).path  # FileSelectorWidget
+            include_path = Path(include_path_str)
             statements.append(LibraryMapInclude(include_path))
         
         return LibraryMapConfig(technology='',  # TODO
