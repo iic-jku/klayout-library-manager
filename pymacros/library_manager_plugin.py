@@ -424,22 +424,22 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             
             mw = pya.MainWindow.instance()
             
-            layout_path = pya.QFileDialog.getSaveFileName(
+            layout_path_str = pya.QFileDialog.getSaveFileName(
                 mw,               
                 "Select Layout File Path",
                 lru_path,                 # starting dir ("" = default to last used / home)
                 f"{HIERARCHICAL_LAYOUT_FILE_FILTER};;All Files (*)"
             )
         
-            if layout_path:
+            if layout_path_str:
+                layout_path = Path(layout_path_str)
                 if '.'.join(layout_path.suffixes).lower() not in HIERARCHICAL_LAYOUT_FILE_SUFFIXES:
-                    layout_path += HIERARCHICAL_LAYOUT_FILE_SUFFIXES[0]
+                    layout_path = layout_path.with_suffix(HIERARCHICAL_LAYOUT_FILE_SUFFIXES[0])
                 
-                FileSystemHelpers.set_least_recent_directory(os.path.dir(layout_path))
+                FileSystemHelpers.set_least_recent_directory(layout_path.parent)
 
                 lib_path = layout_path.with_suffix(LIBRARY_MAP_FILE_SUFFIX)
-
-                self.save_layout_and_library(layout_path, lib_path, self.config)
+                self.save_layout_and_library(layout_path, lib_path, map_cfg)
         except Exception as e:
             print("LibraryManagerPluginFactory.on_save_as_hierarchical_layout caught an exception", e)
             traceback.print_exc()
