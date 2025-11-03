@@ -38,6 +38,7 @@ from klayout_plugin_utils.qt_helpers import (
 from constants import (
     LIBRARY_MAP_FILE_FILTER,
     GENERIC_LAYOUT_FILE_SUFFIXES,
+    HIERARCHICAL_LAYOUT_FILE_SUFFIXES,
 )    
 
 from library_map_config import (
@@ -221,7 +222,10 @@ class LibraryManagerDialog(pya.QDialog):
         
         def on_path_changed(file_selector_widget):
             if item.text(0) == '':
-                stem = strip_all_suffixes(Path(file_selector_widget.path), GENERIC_LAYOUT_FILE_SUFFIXES)
+                path = Path(file_selector_widget.path)
+                stem = strip_all_suffixes(path, HIERARCHICAL_LAYOUT_FILE_SUFFIXES)
+                if stem == path:
+                    stem = strip_all_suffixes(path, GENERIC_LAYOUT_FILE_SUFFIXES)
                 item.setText(0, stem)
             self.set_cell_valid(item, path_idx, True)
             item.setText(status_idx, '')
