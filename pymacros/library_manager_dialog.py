@@ -31,6 +31,9 @@ from klayout_plugin_utils.path_helpers import (
     abbreviate_path,
     expand_path,
 )
+from klayout_plugin_utils.qt_helpers import (
+    qshortcut,
+)
 
 from constants import (
     LIBRARY_MAP_FILE_FILTER,
@@ -134,11 +137,13 @@ class LibraryManagerDialog(pya.QDialog):
         
         self.page.library_mappings_tw.itemSelectionChanged.connect(self.on_library_selection_changed)
         self.page.includes_tw.itemSelectionChanged.connect(self.on_include_selection_changed)
-        
+
+        # NOTE: qt5 vs qt6 has different QShortCut ctor arguments,
+        #       thus use our safety wrapper        
         self.shortcuts = [
-            pya.QShortcut(pya.QKeySequence("Delete"), 
-                          self.page.library_mappings_tw, self.on_remove_library),
-            pya.QShortcut(pya.QKeySequence("Backspace"), 
+            qshortcut(pya.QKeySequence("Delete"), 
+                      self.page.library_mappings_tw, self.on_remove_library),
+            qshortcut(pya.QKeySequence("Backspace"), 
                           self.page.includes_tw, self.on_remove_include)
         ]
     
