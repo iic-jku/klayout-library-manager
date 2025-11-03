@@ -27,7 +27,7 @@ from klayout_plugin_utils.debugging import debug, Debugging
 from klayout_plugin_utils.event_loop import EventLoop
 from klayout_plugin_utils.file_selector_widget import FileSelectorWidget
 from klayout_plugin_utils.path_helpers import (
-    strip_all_suffixes,
+    stem_without_suffixes,
     abbreviate_path,
     expand_path,
 )
@@ -223,9 +223,9 @@ class LibraryManagerDialog(pya.QDialog):
         def on_path_changed(file_selector_widget):
             if item.text(0) == '':
                 path = Path(file_selector_widget.path)
-                stem = strip_all_suffixes(path, HIERARCHICAL_LAYOUT_FILE_SUFFIXES)
+                stem = stem_without_suffixes(path, HIERARCHICAL_LAYOUT_FILE_SUFFIXES)
                 if stem == path:
-                    stem = strip_all_suffixes(path, GENERIC_LAYOUT_FILE_SUFFIXES)
+                    stem = stem_without_suffixes(path, GENERIC_LAYOUT_FILE_SUFFIXES)
                 item.setText(0, stem)
             self.set_cell_valid(item, path_idx, True)
             item.setText(status_idx, '')
