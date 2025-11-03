@@ -32,7 +32,7 @@ from klayout_plugin_utils.path_helpers import (
     expand_path,
 )
 from klayout_plugin_utils.qt_helpers import (
-    qshortcut,
+    compat_QShortCut,
     compat_QTreeWidgetItem_setBackground,
 )
 
@@ -143,10 +143,10 @@ class LibraryManagerDialog(pya.QDialog):
         # NOTE: qt5 vs qt6 has different QShortCut ctor arguments,
         #       thus use our safety wrapper        
         self.shortcuts = [
-            qshortcut(pya.QKeySequence("Delete"), 
-                      self.page.library_mappings_tw, self.on_remove_library),
-            qshortcut(pya.QKeySequence("Backspace"), 
-                          self.page.includes_tw, self.on_remove_include)
+            compat_QShortCut(pya.QKeySequence("Delete"), 
+                             self.page.library_mappings_tw, self.on_remove_library),
+            compat_QShortCut(pya.QKeySequence("Backspace"), 
+                             self.page.includes_tw, self.on_remove_include)
         ]
     
     def transform_path(self, path: Path) -> Path:
