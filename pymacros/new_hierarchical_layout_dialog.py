@@ -394,19 +394,20 @@ class NewHierarchicalLayoutDialog(pya.QDialog):
         try:
             lru_path = FileSystemHelpers.least_recent_directory()
             
-            file_path = pya.QFileDialog.getSaveFileName(
+            file_path_str = pya.QFileDialog.getSaveFileName(
                 self,               
                 "Select Layout File Path",
                 lru_path,                 # starting dir ("" = default to last used / home)
                 f"{HIERARCHICAL_LAYOUT_FILE_FILTER};;All Files (*)"
             )
         
-            if file_path:
+            if file_path_str:
+                file_path = Path(file_path_str)
                 if '.'.join(file_path.suffixes).lower() not in HIERARCHICAL_LAYOUT_FILE_SUFFIXES:
-                    file_path += HIERARCHICAL_LAYOUT_FILE_SUFFIXES[0]   # TODO: determine suffix from user-chosen filter
+                    file_path = file_path.with_suffix(HIERARCHICAL_LAYOUT_FILE_SUFFIXES[0])   # TODO: determine suffix from user-chosen filter
                 self.page.save_path_le.setText(file_path)
                 
-                FileSystemHelpers.set_least_recent_directory(os.path.dirname(file_path))
+                FileSystemHelpers.set_least_recent_directory(file_path.parent)
         except Exception as e:
             print("NewHierarchicalLayoutDialog.on_browse_save_path caught an exception", e)
             traceback.print_exc()
