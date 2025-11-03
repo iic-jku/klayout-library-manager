@@ -33,6 +33,7 @@ from klayout_plugin_utils.path_helpers import (
 )
 from klayout_plugin_utils.qt_helpers import (
     qshortcut,
+    compat_QTreeWidgetItem_setBackground,
 )
 
 from constants import (
@@ -260,7 +261,7 @@ class LibraryManagerDialog(pya.QDialog):
     def set_cell_valid(self, item: pya.QTreeWidgetItem, column: int, valid: bool):
         color = pya.QColor(255, 255, 255) if valid \
                 else pya.QColor(255, 0, 0, 50)     # light red
-        item.setBackgroundColor(column, color)
+        compat_QTreeWidgetItem_setBackground(item, column, color)
     
     def validate_ui_inputs(self) -> bool:
         if Debugging.DEBUG:
