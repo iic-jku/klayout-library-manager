@@ -230,6 +230,8 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         # create new layout
         #
         
+        self.reload_cell_libraries(map_path, map_cfg)
+        
         cv = mw.create_layout(config.technology.name, 1)  # mode 1 == new view
         layout = cv.layout()
         cv.name = config.top_cell
