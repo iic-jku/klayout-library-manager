@@ -202,7 +202,7 @@ class LibraryMapConfigTests(unittest.TestCase):
         ])
         
         issues = LibraryMapIssues()
-        obtained_libs = cfg.effective_library_definitions(base_folder='/home/foo', issues=issue)
+        obtained_libs = cfg.effective_library_definitions(base_folder='/home/foo', issues=issues)
         self.assertEqual(Path('/home/foo/my_stdcells.gds.gz').resolve(), obtained_libs[0].lib_path)
 
         
