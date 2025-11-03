@@ -230,7 +230,7 @@ class NewHierarchicalLayoutDialog(pya.QDialog):
             mode = LibraryMapCreationMode.CREATE_EMPTY
             template_path = None
         else:
-            mode_index = self.page.include_or_copy_template_map_cb.currentIndex()
+            mode_index = self.page.include_or_copy_template_map_cb.currentIndex
             mode = LibraryMapCreationMode.LINK_TEMPLATE if mode_index == 0 else LibraryMapCreationMode.COPY_TEMPLATE
             template_path_str = self.page.template_path_le.text.strip()
             template_path = Path(template_path_str) if template_path_str else None
