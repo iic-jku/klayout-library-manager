@@ -146,7 +146,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
 
         action_reload_cell_libraries = pya.Action()
         action_reload_cell_libraries.title = 'Reload Cell Libraries'
-        action_reload_cell_libraries.default_shortcut = 'Ctrl+Shift+R'
+        action_reload_cell_libraries.default_shortcut = ''
         action_reload_cell_libraries.on_triggered += self.on_reload_cell_libraries
 
         self.actions_by_name: Dict[str, pya.Action] = {
