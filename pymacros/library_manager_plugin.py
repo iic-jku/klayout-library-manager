@@ -473,7 +473,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         if Debugging.DEBUG:
             debug("LibraryManagerPluginFactory.on_export_hierarchical_layout_for_tapeout")
             
-        user_cancelled = False
+        succeeded = False
         layout_path = None
         caught_exception = None
             
@@ -504,7 +504,6 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             )
             
             if not layout_path_str:
-                user_cancelled = True
                 return  # User clicked cancel
                 
             layout_path = Path(layout_path_str)
@@ -526,18 +525,19 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             
             layout.write(str(layout_path), o)
             
+            succeeded = True
             # raise Exception(f"Test exception")
         except Exception as e:
             print("LibraryManagerPluginFactory.on_export_hierarchical_layout_for_tapeout caught an exception", e)
             traceback.print_exc()
             caught_exception = e            
         finally:
-            if user_cancelled:
+            if not succeeded and caught_exception is None:  # cancellation
                 return
-                
+            
             mbox = pya.QMessageBox()
             mbox.setTextFormat(pya.Qt.RichText)
-            if caught_exception is None:
+            if succeeded:
                 mbox.setIcon(pya.QMessageBox.Information)
                 mbox.setWindowTitle('Export For Tapeout Success')
                 mbox.text = "Export for tapeout succeeded."
