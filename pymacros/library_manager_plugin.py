@@ -264,14 +264,14 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             return
     
         o = pya.SaveLayoutOptions()
-        o.oasis_recompress=True
-        o.oasis_permissive=True
+        o.oasis_recompress = True
+        o.oasis_permissive = True
         o.select_all_cells()
         o.select_all_layers()
-        o.format = 'OASIS'
+        o.set_format_from_filename(str(layout_path))
         
         lv = cv.view()
-        lv.save_as(lv.active_cellview_index, str(layout_path), False, o)        
+        lv.save_as(lv.active_cellview_index, str(layout_path), o)
         
     def save_layout_and_library(self, layout_path: Path, lib_path: Path, config: LayoutMapConfig):
         if Debugging.DEBUG:
