@@ -34,6 +34,7 @@ from klayout_plugin_utils.str_enum_compat import StrEnum
 from constants import (
     HIERARCHICAL_LAYOUT_FILE_SUFFIXES,
     HIERARCHICAL_LAYOUT_FILE_FILTER,
+    GENERIC_LAYOUT_FILE_FILTER,
     LIBRARY_MAP_FILE_SUFFIX,
     LIBRARY_MAP_FILE_FILTER,
 )
@@ -139,6 +140,11 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         action_save_as_hierarchical_layout.default_shortcut = ''
         action_save_as_hierarchical_layout.on_triggered += self.on_save_as_hierarchical_layout
 
+        action_export_hierarchical_layout_for_tapeout = pya.Action()
+        action_export_hierarchical_layout_for_tapeout.title = 'Export Layout For Tapeout…'
+        action_export_hierarchical_layout_for_tapeout.default_shortcut = ''
+        action_export_hierarchical_layout_for_tapeout.on_triggered += self.on_export_hierarchical_layout_for_tapeout
+
         action_manage_cell_library_map = pya.Action()
         action_manage_cell_library_map.title = 'Manage Cell Library Map…'
         action_manage_cell_library_map.default_shortcut = 'Ctrl+Shift+M'
@@ -154,6 +160,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             'open_hierarchical_layout': action_open_hierarchical_layout,
             'save_hierarchical_layout': action_save_hierarchical_layout,
             'save_as_hierarchical_layout': action_save_as_hierarchical_layout,
+            'export_hierarchical_layout_for_tapeout': action_export_hierarchical_layout_for_tapeout,
             'manage_cell_library_map': action_manage_cell_library_map,
             'reload_cell_libraries': action_reload_cell_libraries,
         }
@@ -251,10 +258,10 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         meta_info.persisted = True
         layout.add_meta_info(meta_info)
         
-        self.save_hierarchical_layout(config.save_path)
+        self.save_hierarchical_layout(layout_path=config.save_path, write_context_info=True)
         cv.view().zoom_box(pya.DBox(0.001, config.initial_window_um or 2.0))
 
-    def save_hierarchical_layout(self, layout_path: Path):
+    def save_hierarchical_layout(self, layout_path: Path, write_context_info: bool):
         cv = pya.CellView.active()
         if cv is None:
             return
@@ -264,20 +271,30 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             return
     
         o = pya.SaveLayoutOptions()
-        o.oasis_recompress=True
-        o.oasis_permissive=True
+        o.oasis_recompress = True
+        o.oasis_permissive = True
         o.select_all_cells()
         o.select_all_layers()
-        o.format = 'OASIS'
+        o.set_format_from_filename(str(layout_path))
+
+        # NOTE: 
+        #   - for regular "save as…", we want the context info
+        #   - for final tapeout export, we don't want the context info
+        #       - as some online DRC checker will fail when they see the context info
+        o.write_context_info = write_context_info   
         
         lv = cv.view()
-        lv.save_as(lv.active_cellview_index, str(layout_path), False, o)        
+        lv.save_as(lv.active_cellview_index, str(layout_path), o)
         
-    def save_layout_and_library(self, layout_path: Path, lib_path: Path, config: LayoutMapConfig):
+    def save_layout_and_library(self, 
+                                layout_path: Path, 
+                                lib_path: Path, 
+                                config: LayoutMapConfig,
+                                write_context_info: bool):
         if Debugging.DEBUG:
             debug("LibraryManagerPluginFactory.save_layout_and_library")
             
-        self.save_hierarchical_layout(layout_path)
+        self.save_hierarchical_layout(layout_path, write_context_info)
         config.write_json(lib_path)
         
     def validate_layout_is_hierarchical(self, layout: pya.Layout, topic: str) -> bool:
@@ -398,7 +415,10 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             if map_cfg is None:
                 return
             
-            self.save_layout_and_library(layout_file_set.layout_path, layout_file_set.lib_path, map_cfg)
+            self.save_layout_and_library(layout_path=layout_file_set.layout_path,
+                                         lib_path=layout_file_set.lib_path, 
+                                         config=map_cfg,
+                                         write_context_info=True)
         except Exception as e:
             print("LibraryManagerPluginFactory.on_save_hierarchical_layout caught an exception", e)
             traceback.print_exc()
@@ -441,10 +461,103 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 FileSystemHelpers.set_least_recent_directory(layout_path.parent)
 
                 lib_path = layout_path.with_suffix(LIBRARY_MAP_FILE_SUFFIX)
-                self.save_layout_and_library(layout_path, lib_path, map_cfg)
+                self.save_layout_and_library(layout_path=layout_path,
+                                             lib_path=lib_path, 
+                                             config=map_cfg,
+                                             write_context_info=True)
         except Exception as e:
             print("LibraryManagerPluginFactory.on_save_as_hierarchical_layout caught an exception", e)
             traceback.print_exc()
+    
+    def on_export_hierarchical_layout_for_tapeout(self):
+        if Debugging.DEBUG:
+            debug("LibraryManagerPluginFactory.on_export_hierarchical_layout_for_tapeout")
+            
+        user_cancelled = False
+        layout_path = None
+        caught_exception = None
+            
+        try:
+            layout_file_set = LayoutFileSet.active()
+            if layout_file_set is None:
+                self.report_no_active_cell_view('No view open to save')
+                return
+                
+            cv = pya.CellView.active()
+            layout = cv.layout()
+            if not self.validate_layout_is_hierarchical(layout, 'Export Hierarchical Layout failed'):
+                return
+            
+            map_cfg = layout_file_set.load_config('Export Hierarchical Layout failed')
+            if map_cfg is None:
+                return
+            
+            lru_path = FileSystemHelpers.least_recent_directory()
+            
+            mw = pya.MainWindow.instance()
+            
+            layout_path_str = pya.QFileDialog.getSaveFileName(
+                mw,               
+                "Select Layout File Path",
+                lru_path,                 # starting dir ("" = default to last used / home)
+                f"{GENERIC_LAYOUT_FILE_FILTER};;All Files (*)"
+            )
+            
+            if not layout_path_str:
+                user_cancelled = True
+                return  # User clicked cancel
+                
+            layout_path = Path(layout_path_str)
+            
+            FileSystemHelpers.set_least_recent_directory(layout_path.parent)
+        
+            o = pya.SaveLayoutOptions()
+            o.oasis_recompress = True
+            o.oasis_permissive = True
+            o.select_all_cells()
+            o.select_all_layers()
+            o.set_format_from_filename(str(layout_path))
+    
+            # NOTE: 
+            #   - for regular "save as…", we want the context info
+            #   - for final tapeout export, we don't want the context info
+            #       - as some online DRC checker will fail when they see the context info
+            o.write_context_info = False
+            
+            layout.write(str(layout_path), o)
+            
+            # raise Exception(f"Test exception")
+        except Exception as e:
+            print("LibraryManagerPluginFactory.on_export_hierarchical_layout_for_tapeout caught an exception", e)
+            traceback.print_exc()
+            caught_exception = e            
+        finally:
+            if user_cancelled:
+                return
+                
+            mbox = pya.QMessageBox()
+            mbox.setTextFormat(pya.Qt.RichText)
+            if caught_exception is None:
+                mbox.setIcon(pya.QMessageBox.Information)
+                mbox.setWindowTitle('Export For Tapeout Success')
+                mbox.text = "Export for tapeout succeeded."
+                mbox.informativeText = f"The current layout was successfully exported for tapeout to: "\
+                                       f"<pre>{str(layout_path)}</pre>"
+                reveal_button = mbox.addButton("Reveal in File Manager", pya.QMessageBox.ActionRole)
+                ok_button = mbox.addButton("OK", pya.QMessageBox.AcceptRole)
+                    
+                result = mbox.exec_()
+                if result == 0:
+                    FileSystemHelpers.reveal_in_file_manager(layout_path)
+            else:
+                mbox.setIcon(pya.QMessageBox.Critical)
+                mbox.setWindowTitle('Export For Tapeout Error')
+                mbox.text = "Export for tapeout failed."
+                mbox.informativeText = f"Caught Exception: "\
+                                       f"<pre>{str(caught_exception)}</pre>"                
+                ok_button = mbox.addButton("OK", pya.QMessageBox.AcceptRole)                
+                result = mbox.exec_()
+            
     
     def on_manage_cell_library_map(self):
         if Debugging.DEBUG:

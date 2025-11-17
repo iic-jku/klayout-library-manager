@@ -17,11 +17,18 @@
 #--------------------------------------------------------------------------------
 
 GENERIC_LAYOUT_FILE_SUFFIXES = ('.gds', '.gds.gz', 'gds2', 'gds2.gz', '.txt', '.oas')
+GENERIC_LAYOUT_FILE_FILTER = ';;'.join([
+    'GDS2 Files (*.gds *.gds.gz)',
+    'GDS2 Text Files (*.txt)',
+    'OASIS Files (*.oas)'
+])
+
 HIERARCHICAL_LAYOUT_FILE_SUFFIXES = ('.klay.gds', '.klay.gds.gz', '.klay.txt', '.klay.oas')
 HIERARCHICAL_LAYOUT_FILE_FILTER = ';;'.join([
     'Hierarchical GDS2 Files (*.klay.gds *.klay.gds.gz)',
     'Hierarchical GDS2 Text Files (*.klay.txt)',
     'Hierarchical OASIS Files (*.klay.oas)'
 ])
+
 LIBRARY_MAP_FILE_SUFFIX = '.klib'
 LIBRARY_MAP_FILE_FILTER = 'Library Map (*.klib)'
