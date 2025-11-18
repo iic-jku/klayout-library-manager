@@ -31,7 +31,7 @@ from klayout_plugin_utils.dataclass_dict_helpers import dataclass_from_dict
 from klayout_plugin_utils.debugging import debug, Debugging
 from klayout_plugin_utils.event_loop import EventLoop
 from klayout_plugin_utils.json_helpers import JSONEncoderSupportingPaths
-from klayout_plugin_utils.path_helpers import expand_path
+from klayout_plugin_utils.path_helpers import expand_path, rebase_relative_path
 
 #--------------------------------------------------------------------------------
 
@@ -46,7 +46,7 @@ class LibraryDefinition:
     lib_path: Path
     
 
-@dataclass
+@dataclass(frozen=True)
 class LibraryMapInclude:
     include_path: Path
 
@@ -87,6 +87,35 @@ class LibraryMapConfig:
     technology: str = ''
     statements: List[LibraryMapStatement] = field(default_factory=list)
 
+    @classmethod
+    def load_as_copy(cls, original_path: Path, new_path: Path) -> LibraryMapConfig:
+        cfg = LibraryMapConfig.read_json(original_path)
+        
+        original_base_folder = original_path.parent
+        new_base_folder = new_path.parent
+        if original_base_folder != new_base_folder:
+            # NOTE: relative paths might no longer work!
+            ### rebase_relative_path
+            
+            new_statements = []
+            
+            for s in cfg.statements:
+                if isinstance(s, LibraryMapComment):
+                    new_statements.append(s)
+                elif isinstance(s, LibraryDefinition):
+                    new_statements.append(LibraryDefinition(
+                            lib_name=s.lib_name,
+                            lib_path=rebase_relative_path(s.lib_path, original_base_folder, new_base_folder)
+                        )
+                    )
+                elif isinstance(s, LibraryMapInclude):
+                    new_statements.append(
+                        LibraryMapInclude(include_path=rebase_relative_path(s.include_path, original_base_folder, new_base_folder))
+                    )
+            cfg.statements = new_statements
+        cfg.write_json(new_path)
+        return cfg
+    
     @classmethod
     def read_json(cls, path: Path) -> LibraryMapConfig:
         with open(path) as f:
@@ -202,8 +231,8 @@ class LibraryMapConfigTests(unittest.TestCase):
         ])
         
         issues = LibraryMapIssues()
-        obtained_libs = cfg.effective_library_definitions(base_folder='/home/foo', issues=issues)
-        self.assertEqual(Path('/home/foo/my_stdcells.gds.gz').resolve(), obtained_libs[0].lib_path)
+        obtained_libs = cfg.effective_library_definitions(base_folder=f"{os.environ['HOME']}", issues=issues)
+        self.assertEqual(Path(f"{os.environ['HOME']}/my_stdcells.gds.gz").resolve(), obtained_libs[0].lib_path)
 
         
 #--------------------------------------------------------------------------------

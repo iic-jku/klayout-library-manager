@@ -231,7 +231,8 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             case LibraryMapCreationMode.COPY_TEMPLATE:
                 if not validate_library_map_template():
                     return
-                shutil.copy2(config.library_map_template_path, map_path)
+                map_cfg = LibraryMapConfig.load_as_copy(original_path=config.library_map_template_path, 
+                                                        new_path=map_path)
         
         #
         # create new layout
