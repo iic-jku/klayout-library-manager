@@ -297,6 +297,8 @@ class LibraryManagerDialog(pya.QDialog):
             self.set_cell_valid(item, 0, bool(lib_name.strip() != ''))
             path = self.page.library_mappings_tw.itemWidget(item, path_idx).path  # FileSelectorWidget
             path = expand_path(path)
+            if not path.is_absolute():
+                path = self.lib_path.parent / path
             if not update_path_status(item=item, path_idx=1, status_idx=status_idx, path=path):
                 valid=False
             
@@ -306,6 +308,8 @@ class LibraryManagerDialog(pya.QDialog):
             status_idx = 1
             path = self.page.includes_tw.itemWidget(item, path_idx).path  # FileSelectorWidget
             path = expand_path(path)
+            if not path.is_absolute():
+                path = self.lib_path.parent / path
             if not update_path_status(item=item, path_idx=path_idx, status_idx=status_idx, path=path):
                 valid=False
             else:

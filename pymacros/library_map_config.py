@@ -145,6 +145,8 @@ class LibraryMapConfig:
     @staticmethod
     def abbreviate_path(path: Path, base_folder: Path) -> Path:
         ep = expand_path(path)
+        if not ep.is_absolute():
+            ep = Path(base_folder) / ep
         ap = abbreviate_path(path=ep,
                              env_vars=['PDK_ROOT', 'HOME'],  # 'PDK'
                              base_folder=base_folder)
@@ -192,10 +194,10 @@ class LibraryMapConfig:
                     issues.failed_libraries.append((s, issue))
             elif isinstance(s, LibraryMapInclude):
                 path = expand_path(s.include_path)
+                path = self.resolve_path(path, base_folder)
                 if not path.is_file():
                     print(f"ERROR: library map file contains non-file include entry: {s.include_path}, ignoring…")
                     continue
-                path = self.resolve_path(path, base_folder)
                 issue = self.validate_path(path)
                 if issue:
                     issues.failed_includes.append((s, issue))
@@ -231,6 +233,19 @@ class LibraryMapConfigTests(unittest.TestCase):
         self.assertEqual(lm.statements[5].comment, lm_obtained.statements[5].comment)
         self.assertEqual(lm.statements[6].include_path, lm_obtained.statements[6].include_path)
         
+    def test_abbreviate_path__other_cwd(self):
+        old_wd = os.getcwd()
+        try:
+            os.chdir(os.environ['HOME'])
+            
+            self.assertEqual('libs/common.klib', str(LibraryMapConfig.abbreviate_path(
+                path=f"libs/common.klib",
+                env_vars=['HOME'],
+                base_folder=f"{os.environ['HOME']}/base_folder"
+            )))
+        finally:
+            os.chdir(old_wd)
+                
     def test_resolution(self):
         cfg = LibraryMapConfig(technology='sg13g2', statements=[
             LibraryMapComment('KLayout Library Manager Plugin: Cell library map file example'),
