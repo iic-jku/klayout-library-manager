@@ -335,7 +335,6 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         ignore_button = mbox.addButton("Ignore", pya.QMessageBox.AcceptRole)
         
         result = mbox.exec_()
-        print("result={result}")
         match result:
             case 0: return LibraryMapIssueConsequence.LOAD_NOTHING
             case 1: return LibraryMapIssueConsequence.CLOSE_LAYOUT
