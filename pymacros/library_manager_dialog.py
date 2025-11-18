@@ -28,7 +28,6 @@ from klayout_plugin_utils.event_loop import EventLoop
 from klayout_plugin_utils.file_selector_widget import FileSelectorWidget
 from klayout_plugin_utils.path_helpers import (
     stem_without_suffixes,
-    abbreviate_path,
     expand_path,
 )
 from klayout_plugin_utils.qt_helpers import (
@@ -150,10 +149,7 @@ class LibraryManagerDialog(pya.QDialog):
         ]
     
     def transform_path(self, path: Path) -> Path:
-        ep = expand_path(path)
-        ap = abbreviate_path(path=ep,
-                             env_vars=['PDK_ROOT', 'HOME'],  # 'PDK'
-                             base_folder=self.lib_path.parent)
+        ap = LibraryMapConfig.abbreviate_path(path, self.lib_path.parent)
         return ap
     
     def add_includes_tree_row(self, include_path: str):
@@ -298,9 +294,9 @@ class LibraryManagerDialog(pya.QDialog):
             path_idx = 1
             status_idx = 2
             lib_name = item.text(0)
-            lib_path = self.page.library_mappings_tw.itemWidget(item, path_idx).path  # FileSelectorWidget
             self.set_cell_valid(item, 0, bool(lib_name.strip() != ''))
-            path = Path(lib_path)
+            path = self.page.library_mappings_tw.itemWidget(item, path_idx).path  # FileSelectorWidget
+            path = expand_path(path)
             if not update_path_status(item=item, path_idx=1, status_idx=status_idx, path=path):
                 valid=False
             
@@ -308,8 +304,8 @@ class LibraryManagerDialog(pya.QDialog):
             item = self.page.includes_tw.topLevelItem(i)
             path_idx = 0
             status_idx = 1
-            include_path = self.page.includes_tw.itemWidget(item, path_idx).path  # FileSelectorWidget
-            path = Path(include_path)
+            path = self.page.includes_tw.itemWidget(item, path_idx).path  # FileSelectorWidget
+            path = expand_path(path)
             if not update_path_status(item=item, path_idx=path_idx, status_idx=status_idx, path=path):
                 valid=False
             else:

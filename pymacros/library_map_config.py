@@ -31,7 +31,7 @@ from klayout_plugin_utils.dataclass_dict_helpers import dataclass_from_dict
 from klayout_plugin_utils.debugging import debug, Debugging
 from klayout_plugin_utils.event_loop import EventLoop
 from klayout_plugin_utils.json_helpers import JSONEncoderSupportingPaths
-from klayout_plugin_utils.path_helpers import expand_path, rebase_relative_path
+from klayout_plugin_utils.path_helpers import abbreviate_path, expand_path, rebase_relative_path
 
 #--------------------------------------------------------------------------------
 
@@ -143,6 +143,14 @@ class LibraryMapConfig:
         return [s for s in self.statements if isinstance(s, LibraryDefinition)]
 
     @staticmethod
+    def abbreviate_path(path: Path, base_folder: Path) -> Path:
+        ep = expand_path(path)
+        ap = abbreviate_path(path=ep,
+                             env_vars=['PDK_ROOT', 'HOME'],  # 'PDK'
+                             base_folder=base_folder)
+        return ap
+
+    @staticmethod
     def resolve_path(path: Path, base_folder: Path) -> Path:
         path = expand_path(path)
         if not path.is_absolute():
@@ -183,10 +191,11 @@ class LibraryMapConfig:
                 if issue:
                     issues.failed_libraries.append((s, issue))
             elif isinstance(s, LibraryMapInclude):
-                if not s.include_path.is_file():
+                path = expand_path(s.include_path)
+                if not path.is_file():
                     print(f"ERROR: library map file contains non-file include entry: {s.include_path}, ignoring…")
                     continue
-                path = self.resolve_path(s.include_path, base_folder)
+                path = self.resolve_path(path, base_folder)
                 issue = self.validate_path(path)
                 if issue:
                     issues.failed_includes.append((s, issue))
