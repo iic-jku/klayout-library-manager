@@ -258,6 +258,9 @@ class LibraryManagerDialog(pya.QDialog):
         color = pya.QColor(255, 255, 255) if valid \
                 else pya.QColor(255, 0, 0, 50)     # light red
         compat_QTreeWidgetItem_setBackground(item, column, color)
+        item_widget = item.treeWidget().itemWidget(item, column)
+        if item_widget is not None:  # only for the FileSelectorWidget
+            item_widget.set_valid(valid)
     
     def validate_ui_inputs(self) -> bool:
         if Debugging.DEBUG:
