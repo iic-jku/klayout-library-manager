@@ -3,7 +3,7 @@
  <name>LibraryManagerPlugin</name>
  <token/>
  <hidden>false</hidden>
- <version>0.13</version>
+ <version>0.14</version>
  <api-version/>
  <title>Library Manager Plugin</title>
  <doc>Library manager for hierarchical layouts</doc>
@@ -15,7 +15,7 @@
  <depends>
   <name>KLayoutPluginUtils</name>
   <url/>
-  <version>0.10</version>
+  <version>0.11</version>
  </depends>
  <authored-time/>
  <installed-time></installed-time>

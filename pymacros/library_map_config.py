@@ -31,7 +31,7 @@ from klayout_plugin_utils.dataclass_dict_helpers import dataclass_from_dict
 from klayout_plugin_utils.debugging import debug, Debugging
 from klayout_plugin_utils.event_loop import EventLoop
 from klayout_plugin_utils.json_helpers import JSONEncoderSupportingPaths
-from klayout_plugin_utils.path_helpers import expand_path
+from klayout_plugin_utils.path_helpers import abbreviate_path, expand_path, rebase_relative_path
 
 #--------------------------------------------------------------------------------
 
@@ -46,7 +46,7 @@ class LibraryDefinition:
     lib_path: Path
     
 
-@dataclass
+@dataclass(frozen=True)
 class LibraryMapInclude:
     include_path: Path
 
@@ -88,6 +88,35 @@ class LibraryMapConfig:
     statements: List[LibraryMapStatement] = field(default_factory=list)
 
     @classmethod
+    def load_as_copy(cls, original_path: Path, new_path: Path) -> LibraryMapConfig:
+        cfg = LibraryMapConfig.read_json(original_path)
+        
+        original_base_folder = original_path.parent
+        new_base_folder = new_path.parent
+        if original_base_folder != new_base_folder:
+            # NOTE: relative paths might no longer work!
+            ### rebase_relative_path
+            
+            new_statements = []
+            
+            for s in cfg.statements:
+                if isinstance(s, LibraryMapComment):
+                    new_statements.append(s)
+                elif isinstance(s, LibraryDefinition):
+                    new_statements.append(LibraryDefinition(
+                            lib_name=s.lib_name,
+                            lib_path=rebase_relative_path(s.lib_path, original_base_folder, new_base_folder)
+                        )
+                    )
+                elif isinstance(s, LibraryMapInclude):
+                    new_statements.append(
+                        LibraryMapInclude(include_path=rebase_relative_path(s.include_path, original_base_folder, new_base_folder))
+                    )
+            cfg.statements = new_statements
+        cfg.write_json(new_path)
+        return cfg
+    
+    @classmethod
     def read_json(cls, path: Path) -> LibraryMapConfig:
         with open(path) as f:
             data = json.load(f)
@@ -112,6 +141,16 @@ class LibraryMapConfig:
     @cached_property
     def library_definitions(self) -> List[LibraryDefinition]:
         return [s for s in self.statements if isinstance(s, LibraryDefinition)]
+
+    @staticmethod
+    def abbreviate_path(path: Path, base_folder: Path) -> Path:
+        ep = expand_path(path)
+        if not ep.is_absolute():
+            ep = Path(base_folder) / ep
+        ap = abbreviate_path(path=ep,
+                             env_vars=['PDK_ROOT', 'HOME'],  # 'PDK'
+                             base_folder=base_folder)
+        return ap
 
     @staticmethod
     def resolve_path(path: Path, base_folder: Path) -> Path:
@@ -154,10 +193,11 @@ class LibraryMapConfig:
                 if issue:
                     issues.failed_libraries.append((s, issue))
             elif isinstance(s, LibraryMapInclude):
-                if not s.include_path.is_file():
+                path = expand_path(s.include_path)
+                path = self.resolve_path(path, base_folder)
+                if not path.is_file():
                     print(f"ERROR: library map file contains non-file include entry: {s.include_path}, ignoring…")
                     continue
-                path = self.resolve_path(s.include_path, base_folder)
                 issue = self.validate_path(path)
                 if issue:
                     issues.failed_includes.append((s, issue))
@@ -193,6 +233,19 @@ class LibraryMapConfigTests(unittest.TestCase):
         self.assertEqual(lm.statements[5].comment, lm_obtained.statements[5].comment)
         self.assertEqual(lm.statements[6].include_path, lm_obtained.statements[6].include_path)
         
+    def test_abbreviate_path__other_cwd(self):
+        old_wd = os.getcwd()
+        try:
+            os.chdir(os.environ['HOME'])
+            
+            self.assertEqual('libs/common.klib', str(LibraryMapConfig.abbreviate_path(
+                path=f"libs/common.klib",
+                env_vars=['HOME'],
+                base_folder=f"{os.environ['HOME']}/base_folder"
+            )))
+        finally:
+            os.chdir(old_wd)
+                
     def test_resolution(self):
         cfg = LibraryMapConfig(technology='sg13g2', statements=[
             LibraryMapComment('KLayout Library Manager Plugin: Cell library map file example'),
@@ -202,8 +255,8 @@ class LibraryMapConfigTests(unittest.TestCase):
         ])
         
         issues = LibraryMapIssues()
-        obtained_libs = cfg.effective_library_definitions(base_folder='/home/foo', issues=issues)
-        self.assertEqual(Path('/home/foo/my_stdcells.gds.gz').resolve(), obtained_libs[0].lib_path)
+        obtained_libs = cfg.effective_library_definitions(base_folder=f"{os.environ['HOME']}", issues=issues)
+        self.assertEqual(Path(f"{os.environ['HOME']}/my_stdcells.gds.gz").resolve(), obtained_libs[0].lib_path)
 
         
 #--------------------------------------------------------------------------------
