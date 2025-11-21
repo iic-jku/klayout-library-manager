@@ -613,7 +613,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         mw = pya.MainWindow.instance()
         
         def report_issues(issues: LibraryMapIssues) -> bool:
-            consequence = self.report_library_map_issues()
+            consequence = self.report_library_map_issues(issues)
             match consequence:
                 case LibraryMapIssueConsequence.LOAD_NOTHING:
                     return False
