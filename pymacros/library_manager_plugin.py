@@ -225,7 +225,8 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             case LibraryMapCreationMode.LINK_TEMPLATE:
                 if not validate_library_map_template():
                     return
-                abbrev_path = LibraryMapConfig.abbreviate_path(config.library_map_template_path)
+                abbrev_path = LibraryMapConfig.abbreviate_path(path=config.library_map_template_path,
+                                                               base_folder=map_path.parent)
                 map_cfg.statements.append(LibraryMapInclude(abbrev_path))
                 map_cfg.write_json(map_path)
                 
@@ -612,7 +613,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         mw = pya.MainWindow.instance()
         
         def report_issues(issues: LibraryMapIssues) -> bool:
-            consequence = self.report_library_map_issues()
+            consequence = self.report_library_map_issues(issues)
             match consequence:
                 case LibraryMapIssueConsequence.LOAD_NOTHING:
                     return False
