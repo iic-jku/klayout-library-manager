@@ -657,6 +657,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 lib.layout().read(new_lib_def.lib_path)
                 lib.register(new_lib_def.lib_name)
             else:
+                lib.layout().clear()
                 lib.layout().read(new_lib_def.lib_path)
                 lib.refresh()
         
@@ -721,6 +722,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                                 loading_issues.failed_libraries.append((lib_def, str(e)))
                         else:              
                             try:
+                                lib.layout().clear()
                                 lib.layout().read(lib_def.lib_path)
                                 lib.refresh()
                             except Exception as e:
