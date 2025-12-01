@@ -404,9 +404,18 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             print("NewHierarchicalLayoutDialog.on_browse_save_path caught an exception", e)
             traceback.print_exc()
         
-    def report_no_active_cell_view(self, msg: str):
+    def report_no_active_cell_view(self, title: str, text: str, msg: str):
         mw = pya.MainWindow.instance()
-        pya.QMessageBox.critical(mw, 'Save Failed', msg)
+
+        mbx = pya.QMessageBox(mw)
+        mbx.icon = pya.QMessageBox_Icon.Critical
+        mbx.setTextFormat(pya.Qt.RichText)
+        mbx.window_title = title
+        mbx.text = text
+        mbx.informativeText = msg
+        mbx.exec_()
+        return
+        
         
     def on_save_hierarchical_layout(self):
         if Debugging.DEBUG:
@@ -415,7 +424,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         try:
             layout_file_set = LayoutFileSet.active()
             if layout_file_set is None:
-                self.report_no_active_cell_view('No view open to save')
+                self.report_no_active_cell_view('Error', 'Save failed', 'No view open to save')
                 return
     
             map_cfg = layout_file_set.load_config('Save Hierarchical Layout failed')
@@ -437,7 +446,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         try:
             layout_file_set = LayoutFileSet.active()
             if layout_file_set is None:
-                self.report_no_active_cell_view('No view open to save')
+                self.report_no_active_cell_view('Error', 'Save As failed', 'No view open to save')
                 return
                 
             cv = pya.CellView.active()
@@ -487,7 +496,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         try:
             layout_file_set = LayoutFileSet.active()
             if layout_file_set is None:
-                self.report_no_active_cell_view('No view open to save')
+                self.report_no_active_cell_view('Error', 'Export failed', 'No view open to save')
                 return
                 
             cv = pya.CellView.active()
@@ -573,7 +582,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         try:
             layout_file_set = LayoutFileSet.active()
             if layout_file_set is None:
-                self.report_no_active_cell_view('No view open to manage')
+                self.report_no_active_cell_view('Error', 'Manage Cell Library Map failed', 'No view open to manage')
                 return
                 
             cv = pya.CellView.active()
@@ -696,7 +705,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             
             layout_file_set = LayoutFileSet.active()
             if layout_file_set is None:
-                self.report_no_active_cell_view('No view open to reload')
+                self.report_no_active_cell_view('Error', 'Reload Cell Libraries failed', 'No view open to reload')
                 return
 
             map_cfg = layout_file_set.load_config('Reload cell libraries failed')
