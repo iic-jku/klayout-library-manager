@@ -457,7 +457,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         
             if layout_path_str:
                 layout_path = Path(layout_path_str)
-                if '.'.join(layout_path.suffixes).lower() not in HIERARCHICAL_LAYOUT_FILE_SUFFIXES:
+                if ''.join(layout_path.suffixes).lower() not in HIERARCHICAL_LAYOUT_FILE_SUFFIXES:
                     layout_path = layout_path.with_suffix(HIERARCHICAL_LAYOUT_FILE_SUFFIXES[0])
                 
                 FileSystemHelpers.set_least_recent_directory(layout_path.parent)
