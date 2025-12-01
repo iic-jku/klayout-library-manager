@@ -195,8 +195,8 @@ class LibraryMapConfig:
             elif isinstance(s, LibraryMapInclude):
                 path = expand_path(s.include_path)
                 path = self.resolve_path(path, base_folder)
-                if not path.is_file():
-                    print(f"ERROR: library map file contains non-file include entry: {s.include_path}, ignoring…")
+                if str(path).strip() == '':
+                    print(f"ERROR: library map file contains non-file include entry: '{s.include_path}', ignoring…")
                     continue
                 issue = self.validate_path(path)
                 if issue:
