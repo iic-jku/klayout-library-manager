@@ -240,29 +240,30 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         # create new layout
         #
         
-        self.reload_cell_libraries(map_path, map_cfg)
-        
-        cv = mw.create_layout(config.technology.name, 1)  # mode 1 == new view
-        layout = cv.layout()
-        cv.name = config.top_cell
+        def on_cell_libraries_loaded():
+            cv = mw.create_layout(config.technology.name, 1)  # mode 1 == new view
+            layout = cv.layout()
+            cv.name = config.top_cell
+    
+            cell = layout.create_cell(config.top_cell)
+            cv.cell = cell
+            
+            if config.initial_layers.layers:
+                for li in config.initial_layers.layers:
+                    layout.layer(li)
+                cv.view().add_missing_layers()
+            
+            if config.dbu_um is not None:
+                layout.dbu = config.dbu_um
+            
+            meta_info = pya.LayoutMetaInfo('Hierarchical Layout', True)
+            meta_info.persisted = True
+            layout.add_meta_info(meta_info)
+            
+            self.save_hierarchical_layout(layout_path=config.save_path, write_context_info=True)
+            cv.view().zoom_box(pya.DBox(0.001, config.initial_window_um or 2.0))
 
-        cell = layout.create_cell(config.top_cell)
-        cv.cell = cell
-        
-        if config.initial_layers.layers:
-            for li in config.initial_layers.layers:
-                layout.layer(li)
-            cv.view().add_missing_layers()
-        
-        if config.dbu_um is not None:
-            layout.dbu = config.dbu_um
-        
-        meta_info = pya.LayoutMetaInfo('Hierarchical Layout', True)
-        meta_info.persisted = True
-        layout.add_meta_info(meta_info)
-        
-        self.save_hierarchical_layout(layout_path=config.save_path, write_context_info=True)
-        cv.view().zoom_box(pya.DBox(0.001, config.initial_window_um or 2.0))
+        self.reload_cell_libraries(map_path, map_cfg, retry_block=on_cell_libraries_loaded)
 
     def save_hierarchical_layout(self, layout_path: Path, write_context_info: bool):
         cv = pya.CellView.active()
@@ -391,9 +392,13 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 #       therefore we start with an empty view, load the libs there,
                 #       then open the layout
                 mw.create_view()
-
-                self.reload_cell_libraries(lib_path, config)
-                mw.load_layout(str(layout_path), 0)
+            
+                layout_file_set = LayoutFileSet(layout_path)
+                
+                def on_cell_libraries_loaded():
+                    mw.load_layout(str(layout_path), 0)
+                
+                self.reload_cell_libraries(layout_file_set, config, retry_block=on_cell_libraries_loaded)
                 
         except Exception as e:
             print("NewHierarchicalLayoutDialog.on_browse_save_path caught an exception", e)
@@ -577,36 +582,47 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             if not self.validate_layout_is_hierarchical(layout, 'Opening Library Manager failed'):
                 return
             
-            old_map_cfg = layout_file_set.load_config('Manage cell library map failed')
-            if old_map_cfg is None:
-                return
-            
-            mw = pya.MainWindow.instance()
-            self.library_manager_dialog = LibraryManagerDialog(mw)
-            self.library_manager_dialog.update_ui_from_config(layout_file_set.layout_path, layout_file_set.lib_path, old_map_cfg)
-            result = self.library_manager_dialog.exec_()
-            if result != 0:
-                new_map_cfg = layout_file_set.load_config('Manage cell library map failed')
-                if new_map_cfg is None:
-                    return
-                
-                base_folder = layout_file_set.layout_path.parent
-                        
-                changes = LibraryMapChanges.compare(base_folder, old_map_cfg, new_map_cfg)
-                
-                if Debugging.DEBUG:
-                    debug(f"LibraryManagerPluginFactory.on_manage_cell_library_map\n"
-                          f"\tadded: {changes.added_libs}\n"
-                          f"\tremoved: {changes.removed_libs}\n"
-                          f"\trenamed: {changes.renamed_libs}\n"
-                          f"\trepathed: {changes.repathed_libs}\n")
-                
-                self.apply_library_map_changes(changes)
+            self.manage_cell_library_map(layout_file_set)
         except Exception as e:
             print("LibraryManagerPluginFactory.on_manage_cell_library_map caught an exception", e)
             traceback.print_exc()
+            
+    def manage_cell_library_map(self, 
+                                layout_file_set: LayoutFileSet, 
+                                retry_block: Optional[Callable[None, None]] = None):
+        if Debugging.DEBUG:
+            debug("LibraryManagerPluginFactory.manage_cell_library_map")
     
-    def apply_library_map_changes(self, changes: LibraryMapChanges):
+        old_map_cfg = layout_file_set.load_config('Manage cell library map failed')
+        if old_map_cfg is None:
+            return
+        
+        mw = pya.MainWindow.instance()
+        self.library_manager_dialog = LibraryManagerDialog(mw)
+        self.library_manager_dialog.update_ui_from_config(layout_file_set.layout_path, layout_file_set.lib_path, old_map_cfg)
+        result = self.library_manager_dialog.exec_()
+        if result != 0:
+            new_map_cfg = layout_file_set.load_config('Manage cell library map failed')
+            if new_map_cfg is None:
+                return
+            
+            base_folder = layout_file_set.layout_path.parent
+                    
+            changes = LibraryMapChanges.compare(base_folder, old_map_cfg, new_map_cfg)
+            
+            if Debugging.DEBUG:
+                debug(f"LibraryManagerPluginFactory.manage_cell_library_map\n"
+                      f"\tadded: {changes.added_libs}\n"
+                      f"\tremoved: {changes.removed_libs}\n"
+                      f"\trenamed: {changes.renamed_libs}\n"
+                      f"\trepathed: {changes.repathed_libs}\n")
+            
+            self.apply_library_map_changes(layout_file_set, changes, retry_block)
+    
+    def apply_library_map_changes(self, 
+                                  layout_file_set: LayoutFileSet,
+                                  changes: LibraryMapChanges,
+                                  retry_block: Optional[Callable[None, None]] = None):
         if Debugging.DEBUG:
             debug("LibraryManagerPluginFactory.on_reload_cell_libraries")
 
@@ -618,7 +634,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 case LibraryMapIssueConsequence.LOAD_NOTHING:
                     return False
                 case LibraryMapIssueConsequence.EDIT_MAP:
-                    EventLoop.defer(self.on_manage_cell_library_map)
+                    EventLoop.defer(lambda: self.manage_cell_library_map(layout_file_set, retry_block))
                     return False
                 case LibraryMapIssueConsequence.CLOSE_LAYOUT:
                     mw = pya.MainWindow.instance()
@@ -667,6 +683,9 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 if 'unregister' in dir(pya.Library):  # added in KLayout 0.30.5 API
                     pya.Library.unregister(lib)
     
+        if retry_block is not None:
+            retry_block()
+    
     def on_reload_cell_libraries(self):
         if Debugging.DEBUG:
             debug("LibraryManagerPluginFactory.on_reload_cell_libraries")
@@ -684,31 +703,36 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             if map_cfg is None:
                 return
 
-            self.reload_cell_libraries(layout_file_set.lib_path, map_cfg)
+            self.reload_cell_libraries(layout_file_set, map_cfg)
             
         except Exception as e:
             print("LibraryManagerPluginFactory.on_reload_cell_libraries caught an exception", e)
             traceback.print_exc()
 
-    def reload_cell_libraries(self, lib_path: Path, config: LibraryMapConfig):
+    def reload_cell_libraries(self, 
+                              layout_file_set: LayoutFileSet, 
+                              config: LibraryMapConfig,
+                              retry_block: Optional[Callable[None, None]] = None):
         if Debugging.DEBUG:
             debug("LibraryManagerPluginFactory.reload_cell_libraries")
         
-        parent_dir = lib_path.parent
+        parent_dir = layout_file_set.lib_path.parent
         issues = LibraryMapIssues()
         new_lib_defs = config.effective_library_definitions(base_folder=parent_dir, issues=issues)
         
         loading_issues = LibraryMapIssues()
         
-        def handle_issues(issues: LibraryMapIssues):
+        def handle_issues(issues: LibraryMapIssues) -> bool:
             consequence = self.report_library_map_issues(issues)
             match consequence:
                 case LibraryMapIssueConsequence.LOAD_NOTHING:
-                    return
+                    return True
                 case LibraryMapIssueConsequence.EDIT_MAP:
-                    EventLoop.defer(self.on_manage_cell_library_map)
-                case LibraryMapIssueConsequence.NONE |\
-                     LibraryMapIssueConsequence.LOAD_LOADABLES:
+                    EventLoop.defer(lambda: self.manage_cell_library_map(layout_file_set, retry_block))
+                    return False
+                case LibraryMapIssueConsequence.NONE:
+                    return False
+                case LibraryMapIssueConsequence.LOAD_LOADABLES:
                     for lib_def in new_lib_defs:
                         if Debugging.DEBUG:
                             debug(f"Reload library {lib_def.lib_name} from path {lib_def.lib_path}")
@@ -727,9 +751,17 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                                 lib.refresh()
                             except Exception as e:
                                 loading_issues.failed_libraries.append((lib_def, str(e)))
+                    return True
                 case LibraryMapIssueConsequence.CLOSE_LAYOUT:
                     mw = pya.MainWindow.instance()
                     EventLoop.defer(mw.close_current_view)
+                    return False
                     
-        handle_issues(issues)
-        handle_issues(loading_issues)
+        if not handle_issues(issues):
+            return
+        
+        if not handle_issues(loading_issues):
+            return
+        
+        if retry_block is not None:
+            retry_block()
