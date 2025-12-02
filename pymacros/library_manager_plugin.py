@@ -29,6 +29,7 @@ import pya
 from klayout_plugin_utils.debugging import debug, Debugging
 from klayout_plugin_utils.event_loop import EventLoop
 from klayout_plugin_utils.file_system_helpers import FileSystemHelpers
+from klayout_plugin_utils.qt_helpers import qmessagebox_critical
 from klayout_plugin_utils.str_enum_compat import StrEnum
 
 from constants import (
@@ -77,15 +78,10 @@ class LayoutFileSet:
             config = LibraryMapConfig.read_json(self.lib_path)
             return config
         except:
-            mw = pya.MainWindow.instance()        
-            mbx = pya.QMessageBox(mw)
-            mbx.icon = pya.QMessageBox_Icon.Critical
-            mbx.setTextFormat(pya.Qt.RichText)
-            mbx.window_title = 'Error'
-            mbx.text = msg
-            mbx.informativeText = f"The library map file could not be read: "\
-                                  f"<pre>{str(self.lib_path)}</pre>"
-            mbx.exec_()
+            qmessagebox_critical('Error', msg, 
+                f"The library map file could not be read: "\
+                f"<pre>{str(self.lib_path)}</pre>"
+            )
             return None
 
 #--------------------------------------------------------------------------------
@@ -197,12 +193,10 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 map_cfg = LibraryMapConfig.read_json(config.library_map_template_path)
                 return True
             except:
-                mbx = pya.QMessageBox.critical(mw, 'Error', 'New layout creation failed')
-                mbx.icon = pya.QMessageBox_Icon.Critical
-                mbx.setTextFormat(pya.Qt.RichText)
-                mbx.informativeText = f"The template library file could not be read:\n"\
-                                      f"<pre>{str(config.library_map_template_path)}</pre>"
-                mbx.exec_()
+                qmessagebox_critical('Error', 'New layout creation failed', 
+                    f"The template library file could not be read: "\
+                    f"<pre>{str(config.library_map_template_path)}</pre>"
+                )
                 return False
         
         #
@@ -310,14 +304,10 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
 
         # check if this is a hierarchical layout
         if layout.meta_info_value('Hierarchical Layout') is None:
-            mbx = pya.QMessageBox(mw)
-            mbx.icon = pya.QMessageBox_Icon.Critical
-            mbx.setTextFormat(pya.Qt.RichText)
-            mbx.window_title = 'Error'
-            mbx.text = topic
-            mbx.informativeText = f"The current layout is not hierarchical: "\
-                                  f"<pre>{cv.filename()}</pre>"
-            mbx.exec_()
+            qmessagebox_critical('Error', topic, 
+                f"The current layout is not hierarchical: "\
+                f"<pre>{cv.filename()}</pre>"
+            )
             return False
         return True
         
@@ -381,17 +371,6 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             print("NewHierarchicalLayoutDialog.on_browse_save_path caught an exception", e)
             traceback.print_exc()
         
-    def report_no_active_cell_view(self, title: str, text: str, msg: str):
-        mw = pya.MainWindow.instance()
-
-        mbx = pya.QMessageBox(mw)
-        mbx.icon = pya.QMessageBox_Icon.Critical
-        mbx.setTextFormat(pya.Qt.RichText)
-        mbx.window_title = title
-        mbx.text = text
-        mbx.informativeText = msg
-        mbx.exec_()
-        
     def on_save_hierarchical_layout(self):
         if Debugging.DEBUG:
             debug("LibraryManagerPluginFactory.on_save_hierarchical_layout")
@@ -399,7 +378,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         try:
             layout_file_set = LayoutFileSet.active()
             if layout_file_set is None:
-                self.report_no_active_cell_view('Error', 'Save failed', 'No view open to save')
+                qmessagebox_critical('Error', 'Save failed', 'No view open to save')
                 return
     
             map_cfg = layout_file_set.load_config('Save Hierarchical Layout failed')
@@ -421,7 +400,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         try:
             layout_file_set = LayoutFileSet.active()
             if layout_file_set is None:
-                self.report_no_active_cell_view('Error', 'Save As failed', 'No view open to save')
+                qmessagebox_critical('Error', 'Save As failed', 'No view open to save')
                 return
                 
             cv = pya.CellView.active()
@@ -471,7 +450,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         try:
             layout_file_set = LayoutFileSet.active()
             if layout_file_set is None:
-                self.report_no_active_cell_view('Error', 'Export failed', 'No view open to save')
+                qmessagebox_critical('Error', 'Export failed', 'No view open to save')
                 return
                 
             cv = pya.CellView.active()
@@ -541,14 +520,10 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 if result == 0:
                     FileSystemHelpers.reveal_in_file_manager(layout_path)
             else:
-                mbox.setIcon(pya.QMessageBox.Critical)
-                mbox.setWindowTitle('Export For Tapeout Error')
-                mbox.text = "Export for tapeout failed."
-                mbox.informativeText = f"Caught Exception: "\
-                                       f"<pre>{str(caught_exception)}</pre>"                
-                ok_button = mbox.addButton("OK", pya.QMessageBox.AcceptRole)                
-                result = mbox.exec_()
-            
+                qmessagebox_critical('Export For Tapeout Error', 'Export for tapeout failed.', 
+                    f"Caught Exception: "\
+                    f"<pre>{str(caught_exception)}</pre>"
+                )
     
     def on_manage_cell_library_map(self):
         if Debugging.DEBUG:
@@ -557,7 +532,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         try:
             layout_file_set = LayoutFileSet.active()
             if layout_file_set is None:
-                self.report_no_active_cell_view('Error', 'Manage Cell Library Map failed', 'No view open to manage')
+                qmessagebox_critical('Error', 'Manage Cell Library Map failed', 'No view open to manage')
                 return
                 
             cv = pya.CellView.active()
@@ -680,7 +655,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             
             layout_file_set = LayoutFileSet.active()
             if layout_file_set is None:
-                self.report_no_active_cell_view('Error', 'Reload Cell Libraries failed', 'No view open to reload')
+                qmessagebox_critical('Error', 'Reload Cell Libraries failed', 'No view open to reload')
                 return
 
             map_cfg = layout_file_set.load_config('Reload cell libraries failed')
