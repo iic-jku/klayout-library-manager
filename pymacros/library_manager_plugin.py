@@ -361,39 +361,16 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         
             if layout_path_str:
                 layout_path = Path(layout_path_str)
-                lib_path = layout_path.with_suffix(LIBRARY_MAP_FILE_SUFFIX)
-                if not lib_path.exists():
-                    mbx = pya.QMessageBox(mw)
-                    mbx.icon = pya.QMessageBox_Icon.Critical
-                    mbx.setTextFormat(pya.Qt.RichText)
-                    mbx.window_title = 'Error'
-                    mbx.text = 'Opening Hierarchical Layout failed'
-                    mbx.informativeText = f"The library map file does not exist:\n"\
-                                          f"<pre>{str(lib_path)}</pre>"
-                    mbx.exec_()
+            
+                layout_file_set = LayoutFileSet(layout_path)
+                config = layout_file_set.load_config('Opening Hierarchical Layout failed')
+                if config is None:
                     return
-                
-                try:
-                    config = LibraryMapConfig.read_json(lib_path)
-                except:
-                    mbx = pya.QMessageBox(mw)
-                    mbx.icon = pya.QMessageBox_Icon.Critical
-                    mbx.setTextFormat(pya.Qt.RichText)
-                    mbx.window_title = 'Error'
-                    mbx.text = 'Opening Hierarchical Layout failed'
-                    mbx.informativeText = f"The library map file could not be read:\n"\
-                                          f"<pre>{str(lib_path)}</pre>"
-                    mbx.exec_()
-                    return
-                
-                mw = pya.MainWindow.instance()
                 
                 # NOTE: reloading the cell libraries will set the layout dirty, 
                 #       therefore we start with an empty view, load the libs there,
                 #       then open the layout
                 mw.create_view()
-            
-                layout_file_set = LayoutFileSet(layout_path)
                 
                 def on_cell_libraries_loaded():
                     mw.load_layout(str(layout_path), 0)
@@ -414,8 +391,6 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         mbx.text = text
         mbx.informativeText = msg
         mbx.exec_()
-        return
-        
         
     def on_save_hierarchical_layout(self):
         if Debugging.DEBUG:
