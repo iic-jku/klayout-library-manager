@@ -203,7 +203,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         # prepare library config map sidecar file
         #
         
-        map_path = config.save_path.with_suffix(LIBRARY_MAP_FILE_SUFFIX)
+        layout_file_set = LayoutFileSet(config.save_path)
         
         map_cfg = LibraryMapConfig(
             technology=config.technology.name,
@@ -214,21 +214,21 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         
         match config.library_map_creation_mode:
             case LibraryMapCreationMode.CREATE_EMPTY:
-                map_cfg.write_json(map_path)
+                map_cfg.write_json(layout_file_set.lib_path)
                     
             case LibraryMapCreationMode.LINK_TEMPLATE:
                 if not validate_library_map_template():
                     return
                 abbrev_path = LibraryMapConfig.abbreviate_path(path=config.library_map_template_path,
-                                                               base_folder=map_path.parent)
+                                                               base_folder=layout_file_set.parent)
                 map_cfg.statements.append(LibraryMapInclude(abbrev_path))
-                map_cfg.write_json(map_path)
+                map_cfg.write_json(layout_file_set.lib_path)
                 
             case LibraryMapCreationMode.COPY_TEMPLATE:
                 if not validate_library_map_template():
                     return
                 map_cfg = LibraryMapConfig.load_as_copy(original_path=config.library_map_template_path, 
-                                                        new_path=map_path)
+                                                        new_path=layout_file_set.lib_path)
         
         #
         # create new layout
@@ -257,7 +257,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             self.save_hierarchical_layout(layout_path=config.save_path, write_context_info=True)
             cv.view().zoom_box(pya.DBox(0.001, config.initial_window_um or 2.0))
 
-        self.reload_cell_libraries(map_path, map_cfg, retry_block=on_cell_libraries_loaded)
+        self.reload_cell_libraries(layout_file_set, map_cfg, retry_block=on_cell_libraries_loaded)
 
     def save_hierarchical_layout(self, layout_path: Path, write_context_info: bool):
         cv = pya.CellView.active()
@@ -690,7 +690,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                     EventLoop.defer(lambda: self.manage_cell_library_map(layout_file_set, retry_block))
                     return False
                 case LibraryMapIssueConsequence.NONE:
-                    return False
+                    return True
                 case LibraryMapIssueConsequence.LOAD_LOADABLES:
                     for lib_def in new_lib_defs:
                         if Debugging.DEBUG:
