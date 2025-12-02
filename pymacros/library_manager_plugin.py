@@ -83,10 +83,10 @@ class LayoutFileSet:
             mbx.setTextFormat(pya.Qt.RichText)
             mbx.window_title = 'Error'
             mbx.text = msg
-            mbx.informativeText = f"The library map file could not be read:\n"\
+            mbx.informativeText = f"The library map file could not be read: "\
                                   f"<pre>{str(self.lib_path)}</pre>"
             mbx.exec_()
-            return
+            return None
 
 #--------------------------------------------------------------------------------
 
