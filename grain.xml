@@ -3,7 +3,7 @@
  <name>LibraryManagerPlugin</name>
  <token/>
  <hidden>false</hidden>
- <version>0.18</version>
+ <version>0.19</version>
  <api-version/>
  <title>Library Manager Plugin</title>
  <doc>Library manager for hierarchical layouts</doc>
