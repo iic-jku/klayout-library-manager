@@ -36,32 +36,13 @@ from constants import (
     LIBRARY_MAP_FILE_SUFFIX,
     LIBRARY_MAP_FILE_FILTER,
 )
-
+from new_hierarchical_layout_config import NewHierarchicalLayoutConfig, LibraryMapCreationMode
 
 #--------------------------------------------------------------------------------
 
 path_containing_this_script = os.path.realpath(os.path.dirname(__file__))
 
 #--------------------------------------------------------------------------------
-
-
-class LibraryMapCreationMode(StrEnum):
-    CREATE_EMPTY = 'create_empty'
-    LINK_TEMPLATE = 'link'
-    COPY_TEMPLATE = 'copy'
-
-
-@dataclass
-class NewHierarchicalLayoutConfig:
-    save_path: Optional[Path] = None
-    library_map_creation_mode: LibraryMapCreationMode = LibraryMapCreationMode.CREATE_EMPTY
-    library_map_template_path: Optional[Path] = None  # create empty map if None
-    
-    technology: Optional[pya.Technology] = None  # None means default
-    top_cell: Optional[str] = 'TOP'
-    dbu_um: Optional[float] = None   # None means default
-    initial_window_um: float = 2.0
-    initial_layers: LayerList = field(default_factory=LayerList)
 
 
 class NewHierarchicalLayoutDialog(pya.QDialog):
