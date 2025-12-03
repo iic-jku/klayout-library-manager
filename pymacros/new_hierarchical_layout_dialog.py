@@ -224,7 +224,6 @@ class NewHierarchicalLayoutDialog(pya.QDialog):
         
         tech_name = self.page.tech_cbx.currentText
         if tech_name == 'Default': tech_name = None
-        technology = pya.Technology.technology_by_name(tech_name)
         
         layers_str = self.page.layers_le.text
         layer_list_parse_result = LayerList.parse_layer_list_string(layers_str)
@@ -234,7 +233,7 @@ class NewHierarchicalLayoutDialog(pya.QDialog):
             save_path=save_path,
             library_map_creation_mode=mode,
             library_map_template_path=template_path,
-            technology=technology,
+            tech_name=tech_name,
             top_cell=self.page.topcell_le.text.strip() or 'TOP',
             dbu_um=dbu_um,
             initial_window_um=initial_window_um,
