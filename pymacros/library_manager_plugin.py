@@ -235,7 +235,12 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         #
         
         def on_cell_libraries_loaded():
-            cv = mw.create_layout(config.tech_name, 1)  # mode 1 == new view
+            if config.tech_name is None:
+                effective_tech_name = mw.get_config('initial-technology')
+            else:
+                effective_tech_name = config.tech_name
+        
+            cv = mw.create_layout(effective_tech_name, 1)  # mode 1 == new view
             layout = cv.layout()
             cv.name = config.top_cell
     
