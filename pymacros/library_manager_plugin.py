@@ -285,15 +285,14 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         lv.save_as(lv.active_cellview_index, str(layout_path), o)
         
     def save_layout_and_library(self, 
-                                layout_path: Path, 
-                                lib_path: Path, 
+                                layout_file_set: LayoutFileSet, 
                                 config: LayoutMapConfig,
                                 write_context_info: bool):
         if Debugging.DEBUG:
             debug("LibraryManagerPluginFactory.save_layout_and_library")
             
-        self.save_hierarchical_layout(layout_path, write_context_info)
-        config.write_json(lib_path)
+        self.save_hierarchical_layout(layout_file_set.layout_path, write_context_info)
+        config.write_json(layout_file_set.lib_path)
         
     def validate_layout_is_hierarchical(self, layout: pya.Layout, topic: str) -> bool:
         if Debugging.DEBUG:
@@ -385,8 +384,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             if map_cfg is None:
                 return
             
-            self.save_layout_and_library(layout_path=layout_file_set.layout_path,
-                                         lib_path=layout_file_set.lib_path, 
+            self.save_layout_and_library(layout_file_set=layout_file_set,
                                          config=map_cfg,
                                          write_context_info=True)
         except Exception as e:
@@ -430,10 +428,12 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 
                 FileSystemHelpers.set_least_recent_directory(layout_path.parent)
 
-                lib_path = layout_path.with_suffix(LIBRARY_MAP_FILE_SUFFIX)
-                self.save_layout_and_library(layout_path=layout_path,
-                                             lib_path=lib_path, 
-                                             config=map_cfg,
+                new_layout_file_set = LayoutFileSet(layout_path)
+                # translate relative paths…
+                new_map_cfg = LibraryMapConfig.load_as_copy(original_path=layout_file_set.lib_path,
+                                                            new_path=new_layout_file_set.lib_path)
+                self.save_layout_and_library(layout_file_set=new_layout_file_set, 
+                                             config=new_map_cfg,
                                              write_context_info=True)
         except Exception as e:
             print("LibraryManagerPluginFactory.on_save_as_hierarchical_layout caught an exception", e)
