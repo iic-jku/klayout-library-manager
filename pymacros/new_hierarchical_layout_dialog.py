@@ -44,6 +44,8 @@ path_containing_this_script = os.path.realpath(os.path.dirname(__file__))
 
 #--------------------------------------------------------------------------------
 
+DEFAULT_TECH_LABEL='(Default)'
+
 
 class NewHierarchicalLayoutDialog(pya.QDialog):
     def __init__(self, parent=None):
@@ -86,7 +88,7 @@ class NewHierarchicalLayoutDialog(pya.QDialog):
         self.page.use_existing_map_rb.toggled.connect(self.on_radio_buttons_changed)
         
         self.page.tech_cbx.clear()
-        tech_names = [n if n != '' else '(Default)' \
+        tech_names = [n if n != '' else DEFAULT_TECH_LABEL \
                       for n in pya.Technology.technology_names()]
         self.page.tech_cbx.addItems(tech_names)
         
@@ -95,7 +97,7 @@ class NewHierarchicalLayoutDialog(pya.QDialog):
         if cv.is_valid():
             preconfigured_tech = cv.layout().technology()
         if preconfigured_tech is not None:
-            tech_name = preconfigured_tech.name or '(Default)'
+            tech_name = preconfigured_tech.name or DEFAULT_TECH_LABEL
             self.page.tech_cbx.setCurrentText(tech_name)
             self.page.dbu_le.placeholderText = preconfigured_tech.dbu
         
@@ -223,7 +225,7 @@ class NewHierarchicalLayoutDialog(pya.QDialog):
         initial_window_um = float(window_str) if window_str else 2.0
         
         tech_name = self.page.tech_cbx.currentText
-        if tech_name == 'Default': tech_name = None
+        if tech_name == DEFAULT_TECH_LABEL: tech_name = None
         
         layers_str = self.page.layers_le.text
         layer_list_parse_result = LayerList.parse_layer_list_string(layers_str)
