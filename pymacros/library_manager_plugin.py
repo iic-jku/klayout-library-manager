@@ -701,9 +701,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 case LibraryMapIssueConsequence.EDIT_MAP:
                     EventLoop.defer(lambda: self.manage_cell_library_map(layout_file_set, retry_block))
                     return False
-                case LibraryMapIssueConsequence.NONE:
-                    return True
-                case LibraryMapIssueConsequence.LOAD_LOADABLES:
+                case LibraryMapIssueConsequence.NONE | LibraryMapIssueConsequence.LOAD_LOADABLES:
                     for lib_def in new_lib_defs:
                         if Debugging.DEBUG:
                             debug(f"Reload library {lib_def.lib_name} from path {lib_def.lib_path}")
