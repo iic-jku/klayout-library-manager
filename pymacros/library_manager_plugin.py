@@ -229,6 +229,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                     return
                 map_cfg = LibraryMapConfig.load_as_copy(original_path=config.library_map_template_path, 
                                                         new_path=layout_file_set.lib_path)
+            case _: raise NotImplementedError()
         
         #
         # create new layout
@@ -336,6 +337,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             case 1: return LibraryMapIssueConsequence.CLOSE_LAYOUT
             case 2: return LibraryMapIssueConsequence.EDIT_MAP
             case 3: return LibraryMapIssueConsequence.LOAD_LOADABLES
+            case _: raise NotImplementedError()
     
     def on_load_hierarchical_layout(self):
         if Debugging.DEBUG:
@@ -607,6 +609,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 case LibraryMapIssueConsequence.NONE |\
                      LibraryMapIssueConsequence.LOAD_LOADABLES:
                     return True
+                case _: raise NotImplementedError()
 
         if not report_issues(changes.issues):
             return
@@ -720,6 +723,8 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                     mw = pya.MainWindow.instance()
                     EventLoop.defer(mw.close_current_view)
                     return False
+                case _:
+                    raise NotImplementedError()
                     
         if not handle_issues(issues):
             return
