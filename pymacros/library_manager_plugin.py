@@ -229,6 +229,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                     return
                 map_cfg = LibraryMapConfig.load_as_copy(original_path=config.library_map_template_path, 
                                                         new_path=layout_file_set.lib_path)
+            case _: raise NotImplementedError()
         
         #
         # create new layout
@@ -336,6 +337,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             case 1: return LibraryMapIssueConsequence.CLOSE_LAYOUT
             case 2: return LibraryMapIssueConsequence.EDIT_MAP
             case 3: return LibraryMapIssueConsequence.LOAD_LOADABLES
+            case _: raise NotImplementedError()
     
     def on_load_hierarchical_layout(self):
         if Debugging.DEBUG:
@@ -607,6 +609,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 case LibraryMapIssueConsequence.NONE |\
                      LibraryMapIssueConsequence.LOAD_LOADABLES:
                     return True
+                case _: raise NotImplementedError()
 
         if not report_issues(changes.issues):
             return
@@ -667,7 +670,11 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             if map_cfg is None:
                 return
 
-            self.reload_cell_libraries(layout_file_set, map_cfg)
+            def report_success():
+                if Debugging.DEBUG:
+                    debug(f"Successfully loaded libraries")
+
+            self.reload_cell_libraries(layout_file_set, map_cfg, retry_block=report_success)
             
         except Exception as e:
             print("LibraryManagerPluginFactory.on_reload_cell_libraries caught an exception", e)
@@ -694,9 +701,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 case LibraryMapIssueConsequence.EDIT_MAP:
                     EventLoop.defer(lambda: self.manage_cell_library_map(layout_file_set, retry_block))
                     return False
-                case LibraryMapIssueConsequence.NONE:
-                    return True
-                case LibraryMapIssueConsequence.LOAD_LOADABLES:
+                case LibraryMapIssueConsequence.NONE | LibraryMapIssueConsequence.LOAD_LOADABLES:
                     for lib_def in new_lib_defs:
                         if Debugging.DEBUG:
                             debug(f"Reload library {lib_def.lib_name} from path {lib_def.lib_path}")
@@ -720,6 +725,8 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                     mw = pya.MainWindow.instance()
                     EventLoop.defer(mw.close_current_view)
                     return False
+                case _:
+                    raise NotImplementedError()
                     
         if not handle_issues(issues):
             return
