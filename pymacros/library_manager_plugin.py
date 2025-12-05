@@ -670,7 +670,11 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             if map_cfg is None:
                 return
 
-            self.reload_cell_libraries(layout_file_set, map_cfg)
+            def report_success():
+                if Debugging.DEBUG:
+                    debug(f"Successfully loaded libraries")
+
+            self.reload_cell_libraries(layout_file_set, map_cfg, retry_block=report_success)
             
         except Exception as e:
             print("LibraryManagerPluginFactory.on_reload_cell_libraries caught an exception", e)
