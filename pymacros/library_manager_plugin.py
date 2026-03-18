@@ -622,7 +622,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 lib.layout().read(new_lib_def.lib_path)
                 lib.register(new_lib_def.lib_name)
             except Exception as e:
-                loading_issues.failed_libraries.append((new_lib_def, issue))
+                loading_issues.failed_libraries.append((new_lib_def, str(e)))
         
         if not report_issues(loading_issues):
             return        
