@@ -337,6 +337,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             case 1: return LibraryMapIssueConsequence.CLOSE_LAYOUT
             case 2: return LibraryMapIssueConsequence.EDIT_MAP
             case 3: return LibraryMapIssueConsequence.LOAD_LOADABLES
+            case 4: return LibraryMapIssueConsequence.LOAD_NOTHING  # dialog closed via X or Escape
             case _: raise NotImplementedError(f"Unexpected QMessageBox result: {result}")
     
     def on_load_hierarchical_layout(self):
