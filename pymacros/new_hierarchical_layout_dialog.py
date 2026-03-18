@@ -269,7 +269,9 @@ class NewHierarchicalLayoutDialog(pya.QDialog):
                 self.page.include_or_copy_template_map_cb.setCurrentIndex(1)
                 self.page.template_path_le.setEnabled(True)
                 self.page.browse_template_map_pb.setEnabled(True)
-                
+            case _:
+                raise NotImplementedError(f"Unexpected LibraryMapCreationMode: {config.library_map_creation_mode}")
+        
         self.page.template_path_le.setText(
             '' if config.library_map_template_path is None else str(config.library_map_template_path)
         )
