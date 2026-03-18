@@ -331,14 +331,15 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         edit_button = mbox.addButton("Edit Map", pya.QMessageBox.ActionRole)
         ignore_button = mbox.addButton("Ignore", pya.QMessageBox.AcceptRole)
         
-        result = mbox.exec_()
-        match result:
-            case 0: return LibraryMapIssueConsequence.LOAD_NOTHING
-            case 1: return LibraryMapIssueConsequence.CLOSE_LAYOUT
-            case 2: return LibraryMapIssueConsequence.EDIT_MAP
-            case 3: return LibraryMapIssueConsequence.LOAD_LOADABLES
-            case 4: return LibraryMapIssueConsequence.LOAD_NOTHING  # dialog closed via X or Escape
-            case _: raise NotImplementedError(f"Unexpected QMessageBox result: {result}")
+        mbox.exec_()
+        
+        clicked = mbox.clickedButton()
+        if clicked is None or clicked == cancel_button:
+            return LibraryMapIssueConsequence.LOAD_NOTHING
+        elif clicked == close_button: return LibraryMapIssueConsequence.CLOSE_LAYOUT
+        elif clicked == edit_button: return LibraryMapIssueConsequence.EDIT_MAP
+        elif clicked == ignore_button: return LibraryMapIssueConsequence.LOAD_LOADABLES
+        else: return LibraryMapIssueConsequence.LOAD_NOTHING  # dialog closed via X or Escape
     
     def on_load_hierarchical_layout(self):
         if Debugging.DEBUG:
@@ -523,9 +524,10 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                                        f"<pre>{str(layout_path)}</pre>"
                 reveal_button = mbox.addButton("Reveal in File Manager", pya.QMessageBox.ActionRole)
                 ok_button = mbox.addButton("OK", pya.QMessageBox.AcceptRole)
-                    
-                result = mbox.exec_()
-                if result == 0:
+                
+                mbox.exec_()
+                clicked = mbox.clickedButton()
+                if clicked == reveal_button:
                     FileSystemHelpers.reveal_in_file_manager(layout_path)
             else:
                 qmessagebox_critical('Export For Tapeout Error', 'Export for tapeout failed.', 
