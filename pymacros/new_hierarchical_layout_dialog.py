@@ -47,6 +47,11 @@ path_containing_this_script = os.path.realpath(os.path.dirname(__file__))
 DEFAULT_TECH_LABEL='(Default)'
 
 
+def joined_suffixes(path: Path) -> str:
+    """Return all suffixes joined with their leading dots, e.g. '.klay.gds'"""
+    return ''.join(path.suffixes).lower()
+
+
 class NewHierarchicalLayoutDialog(pya.QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -150,11 +155,11 @@ class NewHierarchicalLayoutDialog(pya.QDialog):
             if not parent_dir.exists() or not parent_dir.is_dir():
                 self.set_field_valid(self.page.save_path_le, False)
                 valid = False
-            elif '.'.join(save_path.suffixes).lower() in HIERARCHICAL_LAYOUT_FILE_SUFFIXES:
+            elif joined_suffixes(save_path) in HIERARCHICAL_LAYOUT_FILE_SUFFIXES:
+                self.set_field_valid(self.page.save_path_le, True)
+            else:
                 self.set_field_valid(self.page.save_path_le, False)
                 valid = False
-            else:
-                self.set_field_valid(self.page.save_path_le, True)
     
         if self.page.use_existing_map_rb.checked:
             template_path_str = self.page.template_path_le.text.strip()
@@ -387,7 +392,7 @@ class NewHierarchicalLayoutDialog(pya.QDialog):
         
             if file_path_str:
                 file_path = Path(file_path_str)
-                if '.'.join(file_path.suffixes).lower() not in HIERARCHICAL_LAYOUT_FILE_SUFFIXES:
+                if joined_suffixes(file_path) not in HIERARCHICAL_LAYOUT_FILE_SUFFIXES:
                     file_path = file_path.with_suffix(HIERARCHICAL_LAYOUT_FILE_SUFFIXES[0])   # TODO: determine suffix from user-chosen filter
                 self.page.save_path_le.setText(file_path)
                 
