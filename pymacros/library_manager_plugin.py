@@ -637,6 +637,8 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             if lib:  # NOTE: due to loading errors, it could be that the library does not yet exist
                 if 'unregister' in dir(pya.Library):  # added in KLayout 0.30.5 API
                     pya.Library.unregister(lib)
+                else:
+                    lib.delete()
 
         for new_lib_def in changes.added_libs:
             try:
