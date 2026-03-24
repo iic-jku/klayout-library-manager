@@ -253,29 +253,28 @@ class NewHierarchicalLayoutDialog(pya.QDialog):
         
         self.page.save_path_le.setText('' if config.save_path is None else str(config.save_path))
         
-        match config.library_map_creation_mode:
-            case LibraryMapCreationMode.CREATE_EMPTY:
-                self.page.create_empty_map_rb.setChecked(True)
-                self.page.use_existing_map_rb.setChecked(False)
-                self.page.include_or_copy_template_map_cb.setEnabled(False)
-                self.page.template_path_le.setEnabled(False)
-                self.page.browse_template_map_pb.setEnabled(False)
-            case LibraryMapCreationMode.LINK_TEMPLATE:
-                self.page.create_empty_map_rb.setChecked(False)
-                self.page.use_existing_map_rb.setChecked(True)
-                self.page.include_or_copy_template_map_cb.setEnabled(True)
-                self.page.include_or_copy_template_map_cb.setCurrentIndex(0)
-                self.page.template_path_le.setEnabled(True)
-                self.page.browse_template_map_pb.setEnabled(True)
-            case LibraryMapCreationMode.COPY_TEMPLATE:
-                self.page.create_empty_map_rb.setChecked(False)
-                self.page.use_existing_map_rb.setChecked(True)
-                self.page.include_or_copy_template_map_cb.setEnabled(True)
-                self.page.include_or_copy_template_map_cb.setCurrentIndex(1)
-                self.page.template_path_le.setEnabled(True)
-                self.page.browse_template_map_pb.setEnabled(True)
-            case _:
-                raise NotImplementedError(f"Unexpected LibraryMapCreationMode: {config.library_map_creation_mode}")
+        if config.library_map_creation_mode == LibraryMapCreationMode.CREATE_EMPTY:
+            self.page.create_empty_map_rb.setChecked(True)
+            self.page.use_existing_map_rb.setChecked(False)
+            self.page.include_or_copy_template_map_cb.setEnabled(False)
+            self.page.template_path_le.setEnabled(False)
+            self.page.browse_template_map_pb.setEnabled(False)
+        elif config.library_map_creation_mode == LibraryMapCreationMode.LINK_TEMPLATE:
+            self.page.create_empty_map_rb.setChecked(False)
+            self.page.use_existing_map_rb.setChecked(True)
+            self.page.include_or_copy_template_map_cb.setEnabled(True)
+            self.page.include_or_copy_template_map_cb.setCurrentIndex(0)
+            self.page.template_path_le.setEnabled(True)
+            self.page.browse_template_map_pb.setEnabled(True)
+        elif config.library_map_creation_mode == LibraryMapCreationMode.COPY_TEMPLATE:
+            self.page.create_empty_map_rb.setChecked(False)
+            self.page.use_existing_map_rb.setChecked(True)
+            self.page.include_or_copy_template_map_cb.setEnabled(True)
+            self.page.include_or_copy_template_map_cb.setCurrentIndex(1)
+            self.page.template_path_le.setEnabled(True)
+            self.page.browse_template_map_pb.setEnabled(True)
+        else:
+            raise NotImplementedError(f"Unexpected LibraryMapCreationMode: {config.library_map_creation_mode}")
         
         self.page.template_path_le.setText(
             '' if config.library_map_template_path is None else str(config.library_map_template_path)
