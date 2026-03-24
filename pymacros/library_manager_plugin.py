@@ -212,24 +212,24 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             ]
         )
         
-        match config.library_map_creation_mode:
-            case LibraryMapCreationMode.CREATE_EMPTY:
-                map_cfg.write_json(layout_file_set.lib_path)
-                    
-            case LibraryMapCreationMode.LINK_TEMPLATE:
-                if not validate_library_map_template():
-                    return
-                abbrev_path = LibraryMapConfig.abbreviate_path(path=config.library_map_template_path,
-                                                               base_folder=layout_file_set.parent)
-                map_cfg.statements.append(LibraryMapInclude(abbrev_path))
-                map_cfg.write_json(layout_file_set.lib_path)
+        if config.library_map_creation_mode == LibraryMapCreationMode.CREATE_EMPTY:
+            map_cfg.write_json(layout_file_set.lib_path)
                 
-            case LibraryMapCreationMode.COPY_TEMPLATE:
-                if not validate_library_map_template():
-                    return
-                map_cfg = LibraryMapConfig.load_as_copy(original_path=config.library_map_template_path, 
-                                                        new_path=layout_file_set.lib_path)
-            case _: raise NotImplementedError(f"Unexpected LibraryMapCreationMode: {config.library_map_creation_mode}")
+        elif config.library_map_creation_mode == LibraryMapCreationMode.LINK_TEMPLATE:
+            if not validate_library_map_template():
+                return
+            abbrev_path = LibraryMapConfig.abbreviate_path(path=config.library_map_template_path,
+                                                           base_folder=layout_file_set.parent)
+            map_cfg.statements.append(LibraryMapInclude(abbrev_path))
+            map_cfg.write_json(layout_file_set.lib_path)
+            
+        elif config.library_map_creation_mode == LibraryMapCreationMode.COPY_TEMPLATE:
+            if not validate_library_map_template():
+                return
+            map_cfg = LibraryMapConfig.load_as_copy(original_path=config.library_map_template_path, 
+                                                    new_path=layout_file_set.lib_path)
+        else:
+            raise NotImplementedError(f"Unexpected LibraryMapCreationMode: {config.library_map_creation_mode}")
             
         #
         # create new layout
@@ -599,20 +599,20 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         
         def report_issues(issues: LibraryMapIssues) -> bool:
             consequence = self.report_library_map_issues(issues)
-            match consequence:
-                case LibraryMapIssueConsequence.LOAD_NOTHING:
-                    return False
-                case LibraryMapIssueConsequence.EDIT_MAP:
-                    EventLoop.defer(lambda: self.manage_cell_library_map(layout_file_set, retry_block))
-                    return False
-                case LibraryMapIssueConsequence.CLOSE_LAYOUT:
-                    mw = pya.MainWindow.instance()
-                    EventLoop.defer(mw.close_current_view)
-                    return False
-                case LibraryMapIssueConsequence.NONE |\
-                     LibraryMapIssueConsequence.LOAD_LOADABLES:
-                    return True
-                case _: raise NotImplementedError(f"Unexpected consequence: {consequence}")
+            if consequence == LibraryMapIssueConsequence.LOAD_NOTHING:
+                return False
+            elif consequence == LibraryMapIssueConsequence.EDIT_MAP:
+                EventLoop.defer(lambda: self.manage_cell_library_map(layout_file_set, retry_block))
+                return False
+            elif consequence == LibraryMapIssueConsequence.CLOSE_LAYOUT:
+                mw = pya.MainWindow.instance()
+                EventLoop.defer(mw.close_current_view)
+                return False
+            elif consequence in (LibraryMapIssueConsequence.NONE,
+                                LibraryMapIssueConsequence.LOAD_LOADABLES):
+                return True
+            else:
+                raise NotImplementedError(f"Unexpected consequence: {consequence}")
 
         if not report_issues(changes.issues):
             return
@@ -698,38 +698,37 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         
         def handle_issues(issues: LibraryMapIssues) -> bool:
             consequence = self.report_library_map_issues(issues)
-            match consequence:
-                case LibraryMapIssueConsequence.LOAD_NOTHING:
-                    return True
-                case LibraryMapIssueConsequence.EDIT_MAP:
-                    EventLoop.defer(lambda: self.manage_cell_library_map(layout_file_set, retry_block))
-                    return False
-                case LibraryMapIssueConsequence.NONE | LibraryMapIssueConsequence.LOAD_LOADABLES:
-                    for lib_def in new_lib_defs:
-                        if Debugging.DEBUG:
-                            debug(f"Reload library {lib_def.lib_name} from path {lib_def.lib_path}")
-                        lib = pya.Library.library_by_name(lib_def.lib_name)
-                        if lib is None:
-                            lib = pya.Library()
-                            try:
-                                lib.layout().read(lib_def.lib_path)
-                                lib.register(lib_def.lib_name)
-                            except Exception as e:
-                                loading_issues.failed_libraries.append((lib_def, str(e)))
-                        else:              
-                            try:
-                                lib.layout().clear()
-                                lib.layout().read(lib_def.lib_path)
-                                lib.refresh()
-                            except Exception as e:
-                                loading_issues.failed_libraries.append((lib_def, str(e)))
-                    return True
-                case LibraryMapIssueConsequence.CLOSE_LAYOUT:
-                    mw = pya.MainWindow.instance()
-                    EventLoop.defer(mw.close_current_view)
-                    return False
-                case _:
-                    raise NotImplementedError(f"Unexpected consequence: {consequence}")
+            if consequence == LibraryMapIssueConsequence.LOAD_NOTHING:
+                return True
+            elif consequence == LibraryMapIssueConsequence.EDIT_MAP:
+                EventLoop.defer(lambda: self.manage_cell_library_map(layout_file_set, retry_block))
+                return False
+            elif consequence in (LibraryMapIssueConsequence.NONE, LibraryMapIssueConsequence.LOAD_LOADABLES):
+                for lib_def in new_lib_defs:
+                    if Debugging.DEBUG:
+                        debug(f"Reload library {lib_def.lib_name} from path {lib_def.lib_path}")
+                    lib = pya.Library.library_by_name(lib_def.lib_name)
+                    if lib is None:
+                        lib = pya.Library()
+                        try:
+                            lib.layout().read(lib_def.lib_path)
+                            lib.register(lib_def.lib_name)
+                        except Exception as e:
+                            loading_issues.failed_libraries.append((lib_def, str(e)))
+                    else:              
+                        try:
+                            lib.layout().clear()
+                            lib.layout().read(lib_def.lib_path)
+                            lib.refresh()
+                        except Exception as e:
+                            loading_issues.failed_libraries.append((lib_def, str(e)))
+                return True
+            elif consequence == LibraryMapIssueConsequence.CLOSE_LAYOUT:
+                mw = pya.MainWindow.instance()
+                EventLoop.defer(mw.close_current_view)
+                return False
+            else:
+                raise NotImplementedError(f"Unexpected consequence: {consequence}")
                     
         if not handle_issues(issues):
             return
