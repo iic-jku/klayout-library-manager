@@ -633,13 +633,8 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 loading_issues.failed_libraries.append((new_lib_def, str(e)))
         
         for old_lib_def in changes.removed_libs:
-            lib = pya.Library.library_by_name(old_lib_def.lib_name)
-            if lib:  # NOTE: due to loading errors, it could be that the library does not yet exist
-                if 'unregister' in dir(pya.Library):  # added in KLayout 0.30.5 API
-                    pya.Library.unregister(lib)
-                else:
-                    lib.delete()
-
+            self._unregister_library_by_name(old_lib_def.lib_name)
+        
         for new_lib_def in changes.added_libs:
             try:
                 self._load_or_reload_library(new_lib_def, loading_issues.failed_libraries)
@@ -685,21 +680,27 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             print("LibraryManagerPluginFactory.on_reload_cell_libraries caught an exception", e)
             traceback.print_exc()
 
+    def _unregister_library_by_name(self, name: str):
+        lib = pya.Library.library_by_name(name)
+        if lib:
+            if 'unregister' in dir(pya.Library):  # added in KLayout 0.30.5 API
+                pya.Library.unregister(lib)
+            else:
+                lib.delete()
+    
     def _load_or_reload_library(self,
                                 lib_def: LibraryDefinition,
                                 failed_list: List):
         """Register a new library or safely reload an existing one by name."""
-        lib = pya.Library.library_by_name(lib_def.lib_name)
-        if lib is None:
-            lib = pya.Library()
-            lib.layout().read(str(lib_def.lib_path))
-            lib.register(lib_def.lib_name)
-        else:
-            tmp = pya.Layout()
-            tmp.read(str(lib_def.lib_path))
-            lib.layout().assign(tmp)
-            lib.refresh()
 
+        # Unregister if necessary        
+        self._unregister_library_by_name(lib_def.lib_name)
+
+        # Register library        
+        lib = pya.Library.library_from_file(lib_def.lib_path, lib_def.lib_name)  
+        if Debugging.DEBUG:
+            debug(f"Registered library '{lib_def.lib_name}'")        
+    
     def reload_cell_libraries(self, 
                               layout_file_set: LayoutFileSet, 
                               config: LibraryMapConfig,
