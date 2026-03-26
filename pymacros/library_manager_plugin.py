@@ -511,12 +511,9 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             traceback.print_exc()
             caught_exception = e            
         finally:
-            if not succeeded and caught_exception is None:  # cancellation
-                return
-            
-            mbox = pya.QMessageBox()
-            mbox.setTextFormat(pya.Qt.RichText)
             if succeeded:
+                mbox = pya.QMessageBox()
+                mbox.setTextFormat(pya.Qt.RichText)
                 mbox.setIcon(pya.QMessageBox.Information)
                 mbox.setWindowTitle('Export For Tapeout Success')
                 mbox.text = "Export for tapeout succeeded."
@@ -529,7 +526,9 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 clicked = mbox.clickedButton()
                 if clicked == reveal_button:
                     FileSystemHelpers.reveal_in_file_manager(layout_path)
-            else:
+            elif caught_exception is None:
+                pass  # cancellation
+            elif caught_exception is not None:
                 qmessagebox_critical('Export For Tapeout Error', 'Export for tapeout failed.', 
                     f"Caught Exception: "\
                     f"<pre>{str(caught_exception)}</pre>"
