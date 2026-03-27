@@ -33,6 +33,8 @@ from klayout_plugin_utils.event_loop import EventLoop
 from klayout_plugin_utils.json_helpers import JSONEncoderSupportingPaths
 from klayout_plugin_utils.path_helpers import abbreviate_path, expand_path, rebase_relative_path
 
+from constants import HIERARCHICAL_PARTIAL_SUFFIX, LIBRARY_MAP_FILE_SUFFIX
+
 #--------------------------------------------------------------------------------
 
 @dataclass
@@ -183,6 +185,11 @@ class LibraryMapConfig:
         """
         libs = []
         
+        def add_lib(lib):
+            nonlocal libs
+            if not lib in libs:
+                libs += lib
+        
         for s in self.statements:
             if isinstance(s, LibraryMapComment):
                 continue
@@ -192,6 +199,11 @@ class LibraryMapConfig:
                 issue = self.validate_path(lib_path)
                 if issue:
                     issues.failed_libraries.append((s, issue))
+                elif HIERARCHICAL_PARTIAL_SUFFIX in s.lib_path.suffixes:  # if hierarchal (might also be a regular GDS)
+                    sub_lib_path = lib_path.with_suffix(LIBRARY_MAP_FILE_SUFFIX)
+                    sub_config = LibraryMapConfig.read_json(sub_lib_path)
+                    lib = sub_config.effective_library_definitions(base_folder=sub_lib_path.parent, issues=issues)
+                    add_lib(lib)
             elif isinstance(s, LibraryMapInclude):
                 path = expand_path(s.include_path)
                 path = self.resolve_path(path, base_folder)
@@ -203,7 +215,8 @@ class LibraryMapConfig:
                     issues.failed_includes.append((s, issue))
                 else:
                     config = LibraryMapConfig.read_json(path)
-                    libs += config.effective_library_definitions(base_folder=path.parent, issues=issues)
+                    lib = config.effective_library_definitions(base_folder=path.parent, issues=issues)
+                    add_lib(lib)
         return libs
 
 #--------------------------------------------------------------------------------
