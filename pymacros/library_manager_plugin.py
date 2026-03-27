@@ -659,6 +659,12 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
     def on_reload_cell_libraries(self):
         if Debugging.DEBUG:
             debug("LibraryManagerPluginFactory.on_reload_cell_libraries")
+
+        if 'library_from_file' not in dir(pya.Library):  # added in KLayout 0.30.8 API
+            qmessagebox_critical('Error', 'Reload Cell Libraries failed', 
+                                 f"Reloading cell libraries is not possible prior to <pre>KLayout v0.30.8.</pre> "\
+                                 f"For now, please restart KLayout for any library cell changes to propagate.")
+            return
         
         try:        
             mw = pya.MainWindow.instance()
