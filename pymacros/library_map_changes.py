@@ -46,7 +46,7 @@ class LibraryMapChanges:
     issues: LibraryMapIssues = field(default_factory=LibraryMapIssues)
 
     @classmethod
-    def compare(cls, 
+    def compare(self, 
                 base_folder: Path, 
                 old_config: LibraryMapConfig,
                 new_config: LibraryMapConfig) -> LibraryMapChanges:

@@ -511,9 +511,12 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             traceback.print_exc()
             caught_exception = e            
         finally:
+            if not succeeded and caught_exception is None:  # cancellation
+                return
+            
+            mbox = pya.QMessageBox()
+            mbox.setTextFormat(pya.Qt.RichText)
             if succeeded:
-                mbox = pya.QMessageBox()
-                mbox.setTextFormat(pya.Qt.RichText)
                 mbox.setIcon(pya.QMessageBox.Information)
                 mbox.setWindowTitle('Export For Tapeout Success')
                 mbox.text = "Export for tapeout succeeded."
@@ -526,9 +529,7 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 clicked = mbox.clickedButton()
                 if clicked == reveal_button:
                     FileSystemHelpers.reveal_in_file_manager(layout_path)
-            elif caught_exception is None:
-                pass  # cancellation
-            elif caught_exception is not None:
+            else:
                 qmessagebox_critical('Export For Tapeout Error', 'Export for tapeout failed.', 
                     f"Caught Exception: "\
                     f"<pre>{str(caught_exception)}</pre>"
@@ -618,6 +619,17 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         
         loading_issues = LibraryMapIssues()
         
+        for new_lib_def in changes.added_libs:
+            try:
+                lib = pya.Library()
+                lib.layout().read(new_lib_def.lib_path)
+                lib.register(new_lib_def.lib_name)
+            except Exception as e:
+                loading_issues.failed_libraries.append((new_lib_def, str(e)))
+        
+        if not report_issues(loading_issues):
+            return        
+        
         for old_lib_def, new_lib_def in changes.renamed_libs:
             lib = pya.Library.library_by_name(old_lib_def.lib_name)
             if 'rename' in dir(lib):  # added in KLayout 0.30.5 API
@@ -626,22 +638,20 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         for old_lib_def, new_lib_def in changes.repathed_libs:
             lib = pya.Library.library_by_name(new_lib_def.lib_name)
             # NOTE: due to loading errors, it could be that the library does not yet exist
-            try:
-                self._load_or_reload_library(new_lib_def, loading_issues.failed_libraries)
-            except Exception as e:
-                loading_issues.failed_libraries.append((new_lib_def, str(e)))
+            if lib is None:
+                lib = pya.Library()
+                lib.layout().read(new_lib_def.lib_path)
+                lib.register(new_lib_def.lib_name)
+            else:
+                lib.layout().clear()
+                lib.layout().read(new_lib_def.lib_path)
+                lib.refresh()
         
         for old_lib_def in changes.removed_libs:
-            self._unregister_library_by_name(old_lib_def.lib_name)
-        
-        for new_lib_def in changes.added_libs:
-            try:
-                self._load_or_reload_library(new_lib_def, loading_issues.failed_libraries)
-            except Exception as e:
-                loading_issues.failed_libraries.append((new_lib_def, str(e)))
-        
-        if not report_issues(loading_issues):
-            return        
+            lib = pya.Library.library_by_name(old_lib_def.lib_name)
+            if lib:  # NOTE: due to loading errors, it could be that the library does not yet exist
+                if 'unregister' in dir(pya.Library):  # added in KLayout 0.30.5 API
+                    pya.Library.unregister(lib)
     
         if retry_block is not None:
             retry_block()
@@ -649,12 +659,6 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
     def on_reload_cell_libraries(self):
         if Debugging.DEBUG:
             debug("LibraryManagerPluginFactory.on_reload_cell_libraries")
-
-        if 'library_from_file' not in dir(pya.Library):  # added in KLayout 0.30.8 API
-            qmessagebox_critical('Error', 'Reload Cell Libraries failed', 
-                                 f"Reloading cell libraries is not possible prior to <pre>KLayout v0.30.8.</pre> "\
-                                 f"For now, please restart KLayout for any library cell changes to propagate.")
-            return
         
         try:        
             mw = pya.MainWindow.instance()
@@ -679,27 +683,6 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
             print("LibraryManagerPluginFactory.on_reload_cell_libraries caught an exception", e)
             traceback.print_exc()
 
-    def _unregister_library_by_name(self, name: str):
-        lib = pya.Library.library_by_name(name)
-        if lib:
-            if 'unregister' in dir(pya.Library):  # added in KLayout 0.30.5 API
-                pya.Library.unregister(lib)
-            else:
-                lib.delete()
-    
-    def _load_or_reload_library(self,
-                                lib_def: LibraryDefinition,
-                                failed_list: List):
-        """Register a new library or safely reload an existing one by name."""
-
-        # Unregister if necessary        
-        self._unregister_library_by_name(lib_def.lib_name)
-
-        # Register library        
-        lib = pya.Library.library_from_file(lib_def.lib_path, lib_def.lib_name)  
-        if Debugging.DEBUG:
-            debug(f"Registered library '{lib_def.lib_name}'")        
-    
     def reload_cell_libraries(self, 
                               layout_file_set: LayoutFileSet, 
                               config: LibraryMapConfig,
@@ -724,10 +707,21 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                 for lib_def in new_lib_defs:
                     if Debugging.DEBUG:
                         debug(f"Reload library {lib_def.lib_name} from path {lib_def.lib_path}")
-                    try:
-                        self._load_or_reload_library(lib_def, loading_issues.failed_libraries)
-                    except Exception as e:
-                        loading_issues.failed_libraries.append((lib_def, str(e)))
+                    lib = pya.Library.library_by_name(lib_def.lib_name)
+                    if lib is None:
+                        lib = pya.Library()
+                        try:
+                            lib.layout().read(lib_def.lib_path)
+                            lib.register(lib_def.lib_name)
+                        except Exception as e:
+                            loading_issues.failed_libraries.append((lib_def, str(e)))
+                    else:              
+                        try:
+                            lib.layout().clear()
+                            lib.layout().read(lib_def.lib_path)
+                            lib.refresh()
+                        except Exception as e:
+                            loading_issues.failed_libraries.append((lib_def, str(e)))
                 return True
             elif consequence == LibraryMapIssueConsequence.CLOSE_LAYOUT:
                 mw = pya.MainWindow.instance()
