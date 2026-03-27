@@ -23,6 +23,8 @@ GENERIC_LAYOUT_FILE_FILTER = ';;'.join([
     'OASIS Files (*.oas)'
 ])
 
+HIERARCHICAL_PARTIAL_SUFFIX = '.klay'
+
 HIERARCHICAL_LAYOUT_FILE_SUFFIXES = ('.klay.gds', '.klay.gds.gz', '.klay.txt', '.klay.oas')
 HIERARCHICAL_LAYOUT_FILE_FILTER = ';;'.join([
     'Hierarchical GDS2 Files (*.klay.gds *.klay.gds.gz)',
