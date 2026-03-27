@@ -646,11 +646,15 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
         if retry_block is not None:
             retry_block()
     
+    @property
+    def is_klayout_version_before__Library_library_from_file(self) -> bool:
+        return 'library_from_file' not in dir(pya.Library)  # added in KLayout 0.30.8 API
+    
     def on_reload_cell_libraries(self):
         if Debugging.DEBUG:
             debug("LibraryManagerPluginFactory.on_reload_cell_libraries")
 
-        if 'library_from_file' not in dir(pya.Library):  # added in KLayout 0.30.8 API
+        if self.is_klayout_version_before__Library_library_from_file:
             qmessagebox_critical('Error', 'Reload Cell Libraries failed', 
                                  f"Reloading cell libraries is not possible prior to <pre>KLayout v0.30.8.</pre> "\
                                  f"For now, please restart KLayout for any library cell changes to propagate.")
@@ -692,13 +696,35 @@ class LibraryManagerPluginFactory(pya.PluginFactory):
                                 failed_list: List):
         """Register a new library or safely reload an existing one by name."""
 
-        # Unregister if necessary        
-        self._unregister_library_by_name(lib_def.lib_name)
+        if self.is_klayout_version_before__Library_library_from_file:
+            # NOTE: legacy version, library reloading was problematic:
+            #       https://github.com/iic-jku/klayout-library-manager/issues/41
+            #       https://github.com/iic-jku/klayout-library-manager/issues/45
+            #       https://github.com/KLayout/klayout/issues/2305
+            # Therefore loading new libraries with old KLayout is OK, but cell instance updates do not work!
+            existing = pya.Library.library_by_name(lib_def.lib_name)
+            if existing:
+                # NOTE: we don't want to handle this as an exception
+                #       because then hierarchical layouts can't be closed and opened again
+                #       without triggering the error
+                # raise Exception(f"Reloading cell library {lib_def.lib_name} "\
+                #                 f"is not possible prior to KLayout 0.30.8")
+                return
+                
+            else:
+                lib = pya.Library()
+                lib.layout().read(lib_def.lib_path)
+                lib.register(lib_def.lib_name)
 
-        # Register library        
-        lib = pya.Library.library_from_file(lib_def.lib_path, lib_def.lib_name)  
-        if Debugging.DEBUG:
-            debug(f"Registered library '{lib_def.lib_name}'")        
+                if Debugging.DEBUG:
+                    debug(f"Registered library '{lib_def.lib_name}'")        
+        else:  # Library.library_from_file is available!
+            self._unregister_library_by_name(lib_def.lib_name)  # Unregister if necessary
+            
+            # Register library        
+            lib = pya.Library.library_from_file(lib_def.lib_path, lib_def.lib_name)
+            if Debugging.DEBUG:
+                debug(f"Registered library '{lib_def.lib_name}'")        
     
     def reload_cell_libraries(self, 
                               layout_file_set: LayoutFileSet, 
